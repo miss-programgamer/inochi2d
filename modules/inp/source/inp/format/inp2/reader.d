@@ -9,7 +9,7 @@
 module inp.format.inp2.reader;
 import inp.format.node;
 import inp.format.inp2;
-import inp.crc;
+import nulib.digest.crc;
 import nulib.io.stream;
 import nulib.io.stream.rw;
 import nulib.math;
