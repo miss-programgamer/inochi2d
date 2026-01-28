@@ -1,4 +1,4 @@
-/*
+/**
     Inochi2D Simple Physics Node
 
     Copyright © 2022, Inochi2D Project
@@ -8,11 +8,13 @@
 */
 module inochi2d.core.nodes.drivers.simplephysics;
 import inochi2d.core.nodes.drivers;
-import inochi2d.core.format;
+import inochi2d.core.serde;
 import inochi2d.core.guid;
 import inochi2d.core.math;
 import inochi2d.core.phys;
 import inochi2d;
+import numem;
+
 import std.algorithm.sorting;
 import std.exception;
 
@@ -39,9 +41,9 @@ enum ParamMapMode {
 }
 
 class Pendulum : PhysicsSystem {
-    SimplePhysics driver;
-
 private:
+@nogc:
+    SimplePhysics driver;
     vec2 bob = vec2(0, 0);
     float angle = 0;
     float dAngle = 0;
@@ -91,13 +93,15 @@ public:
 }
 
 class SpringPendulum : PhysicsSystem {
+private:
+@nogc:
     SimplePhysics driver;
 
-private:
     vec2 bob = vec2(0, 0);
     vec2 dBob = vec2(0, 0);
 
 protected:
+
     override
     void eval(float t) {
         setD(bob, dBob);
@@ -172,6 +176,14 @@ public:
 @TypeId("SimplePhysics", 0x00000103)
 class SimplePhysics : Driver {
 private:
+    void __tmp__pushToParameter(Parameter param, vec2 paramVal, vec2 oscale) @nogc {
+        assumeNoThrowNoGC((Parameter param, vec2 paramVal, vec2 oscale) {
+            param.pushIOffset(vec2(paramVal.x * oscale.x, paramVal.y * oscale.y), ParamMergeMode.forced);
+            param.update();
+        }, param, paramVal, oscale);
+    }
+
+@nogc:
 
     float offsetGravity = 1.0;
     float offsetLength = 0;
@@ -189,16 +201,20 @@ protected:
     PhysicsSystem system;
 
     /**
-        Allows serializing self data (with pretty serializer)
+        Serializes this node to a DataNode.
+
+        Params:
+            object =    The DataNode to serialize to.
+            recursive = Whether to recurse through children.
     */
     override
-    void onSerialize(ref JSONValue object, bool recursive=true) {
+    void onSerialize(ref DataNode object, bool recursive=true) {
         super.onSerialize(object, recursive);
 
         auto target = paramRef.toString();
-        object["target"] = target.dup;
-        object["model_type"] = modelType_;
-        object["map_mode"] = mapMode;
+        object["target"] = target[];
+        object["model_type"] = cast(string)modelType_;
+        object["map_mode"] = cast(string)mapMode;
         object["gravity"] = gravity;
         object["length"] = length;
         object["frequency"] = frequency;
@@ -208,8 +224,14 @@ protected:
         object["local_only"] = localOnly;
     }
 
+    /**
+        Deserializes this node from a DataNode.
+
+        Params:
+            object = The DataNode to deserialize from.
+    */
     override
-    void onDeserialize(ref JSONValue object) {
+    void onDeserialize(ref DataNode object) {
         super.onDeserialize(object);
 
         this.paramRef = object.tryGetGUID("param", "target");
@@ -224,11 +246,31 @@ protected:
         object.tryGetRef(localOnly, "local_only", false);
     }
 
+    /**
+        Called when the node is to finalize its deserialization from disk.
+    */
     override
-    void finalize() {
+    void onFinalize() {
         this.param_ = puppet.findParameter(paramRef);
+        this.reset();
         super.finalize();
-        reset();
+    }
+
+    /**
+        Called during the early update phase of a new frame.
+        
+        Params:
+            drawList =  The drawlist for the active scene.
+    */
+    override
+    void onPreUpdate(DrawList drawList) {
+        super.onPreUpdate(drawList);
+        offsetGravity = 1;
+        offsetLength = 0;
+        offsetFrequency = 1;
+        offsetAngleDamping = 1;
+        offsetLengthDamping = 1;
+        offsetOutputScale = vec2(1, 1);
     }
 
 public:
@@ -305,48 +347,53 @@ public:
         The affected parameters of the driver.
     */
     override
-    @property Parameter[] affectedParameters() => param_ ? [param_] : null;
+    @property Parameter[] affectedParameters() @nogc => (&param_)[0..1];
 
     /**
         Physics scale.
     */
-    @property float scale() => puppet.properties.physicsPixelsPerMeter;
+    @property float scale() @nogc => puppet.properties.physicsPixelsPerMeter;
 
     /**
         The final gravity
     */
-    @property float finalGravity() => (gravity * offsetGravity) * puppet.properties.physicsGravity * this.scale;
+    @property float finalGravity() @nogc => (gravity * offsetGravity) * puppet.properties.physicsGravity * this.scale;
 
     /**
         The final length
     */
-    @property float finalLength() => length + offsetLength;
+    @property float finalLength() @nogc => length + offsetLength;
 
     /**
         The final frequency
     */
-    @property float finalFrequency() => frequency * offsetFrequency;
+    @property float finalFrequency() @nogc => frequency * offsetFrequency;
 
     /**
         The final angle damping
     */
-    @property float finalAngleDamping() => angleDamping * offsetAngleDamping;
+    @property float finalAngleDamping() @nogc => angleDamping * offsetAngleDamping;
 
     /**
         The final length damping
     */
-    @property float finalLengthDamping() => lengthDamping * offsetLengthDamping;
+    @property float finalLengthDamping() @nogc => lengthDamping * offsetLengthDamping;
 
     /**
         The final output scale
     */
-    @property vec2 finalOutputScale() => outputScale * offsetOutputScale;
+    @property vec2 finalOutputScale() @nogc => outputScale * offsetOutputScale;
+
+    ~this() {
+        nogc_delete(system);
+    }
 
     /**
         Constructs a new SimplePhysics node
     */
     this(Node parent = null) {
         this(inNewGUID(), parent);
+        this.reset();
     }
 
     /**
@@ -354,18 +401,7 @@ public:
     */
     this(GUID guid, Node parent = null) {
         super(guid, parent);
-        reset();
-    }
-
-    override
-    void preUpdate(DrawList drawList) {
-        super.preUpdate(drawList);
-        offsetGravity = 1;
-        offsetLength = 0;
-        offsetFrequency = 1;
-        offsetAngleDamping = 1;
-        offsetLengthDamping = 1;
-        offsetOutputScale = vec2(1, 1);
+        this.reset();
     }
 
     override
@@ -441,9 +477,8 @@ public:
             default:
                 break;
         }
-
-        param.pushIOffset(vec2(paramVal.x * oscale.x, paramVal.y * oscale.y), ParamMergeMode.forced);
-        param.update();
+        
+        __tmp__pushToParameter(param, paramVal, oscale);
     }
 
     override
@@ -452,10 +487,10 @@ public:
 
         switch (modelType) {
             case PhysicsModel.Pendulum:
-                system = new Pendulum(this);
+                system = nogc_new!Pendulum(this);
                 break;
             case PhysicsModel.SpringPendulum:
-                system = new SpringPendulum(this);
+                system = nogc_new!SpringPendulum(this);
                 break;
             default:
                 break;

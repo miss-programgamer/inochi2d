@@ -15,6 +15,11 @@ import nulib.math;
 import numem;
 import inp.format.json.reader;
 
+import inp.format : 
+    INP_TAG_PAYLOAD, 
+    INP_TAG_TEXTURES, 
+    INP_TAG_VENDOR;
+
 @nogc:
 
 /**
@@ -48,9 +53,9 @@ private:
 
 void readINP1Impl()(StreamReader reader, ref DataNode node) {
     node = DataNode.createObject();
-    node[INP1_MAGIC] = DataNode.createObject();
-    node["TEX_SECT"] = DataNode.createArray();
-    node["EXT_SECT"] = DataNode.createObject();
+    node[INP_TAG_PAYLOAD] = DataNode.createObject();
+    node[INP_TAG_TEXTURES] = DataNode.createArray();
+    node[INP_TAG_VENDOR] = DataNode.createObject();
 
     ptrdiff_t streamLength = reader.stream.length;
     readLoop: while(reader.stream.tell < streamLength) {
@@ -62,10 +67,10 @@ void readINP1Impl()(StreamReader reader, ref DataNode node) {
 
             case INP1_MAGIC:
                 uint payloadLength = reader.readU32BE();
-                reader.readJson(node[INP1_MAGIC], payloadLength);
+                reader.readJson(node[INP_TAG_PAYLOAD], payloadLength);
                 break;
 
-            case "TEX_SECT":
+            case INP_TAG_TEXTURES:
                 uint count = reader.readU32BE();
                 foreach(i; 0..count) {
                     
@@ -78,23 +83,22 @@ void readINP1Impl()(StreamReader reader, ref DataNode node) {
 
                         result["encoding"] = encoding;
                         result["data"] = data;
-                        node["TEX_SECT"] ~= result;
+                        node[INP_TAG_TEXTURES] ~= result;
 
                         nu_freea(data);
                     }
                 }
                 break;
 
-            case "EXT_SECT":
+            case INP_TAG_VENDOR:
                 uint count = reader.readU32BE();
                 foreach(i; 0..count) {
                     auto dataKey = reader.readUTF8(reader.readU32BE());
                     auto dataValue = nu_malloca!ubyte(reader.readU32BE());
                     reader.stream.read(dataValue);
-                    node["EXT_SECT"][dataKey] = dataValue;
+                    node[INP_TAG_VENDOR][dataKey] = dataValue;
                     nu_freea(dataValue);
                 }
-
                 break;
         }
     }

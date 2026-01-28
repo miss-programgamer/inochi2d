@@ -10,6 +10,9 @@ module inochi2d.core.nodes.visual;
 import inochi2d.core.nodes;
 import inochi2d.core.math;
 import inochi2d.core;
+import nulib.collections;
+import nulib.math.fixed;
+import nulib.math;
 import numem;
 
 /**
@@ -17,59 +20,183 @@ import numem;
 */
 @TypeId("Visual", 0x0001)
 @TypeIdAbstract
-abstract class Visual : Node {
+abstract
+class Visual : Node {
+private:
+@nogc:
+    vector!MaskBinding masks_;
+    size_t maskCount_;
+    size_t dodgeCount_;
+
+    void updateCounts() {
+        maskCount_ = 0;
+        dodgeCount_ = 0;
+        foreach(m; masks) {
+            if (m.mode == MaskingMode.mask) maskCount_++;
+            if (m.mode == MaskingMode.dodge) dodgeCount_++;
+        }
+    }
+
+protected:
+
+    /**
+        Constructs a new visual
+    */
+    this(Node parent = null) {
+        super(parent);
+    }
+
+    /**
+        Constructs a new visual
+    */
+    this(GUID guid, Node parent = null) {
+        super(guid, parent);
+    }
+
+    /**
+        Serializes this node to a DataNode.
+
+        Params:
+            object =    The DataNode to serialize to.
+            recursive = Whether to recurse through children.
+    */
+    override
+    void onSerialize(ref DataNode object, bool recursive = true) {
+        super.onSerialize(object, recursive);
+        
+        // Serialize masks, if any are applied.
+        if (masks_.length > 0) {
+            object["masks"] = DataNode.createArray();
+            foreach(mask; masks_) {
+                object["masks"] ~= mask.serialize();
+            }
+        }
+    }
+
+    /**
+        Deserializes this node from a DataNode.
+
+        Params:
+            object = The DataNode to deserialize from.
+    */
+    override
+    void onDeserialize(ref DataNode object) {
+        super.onDeserialize(object);
+
+        // Deserialize masks, if any are present.
+        if ("masks" in object && object["masks"].isArray) {
+            masks_.resize(object["masks"].length);
+            foreach(i, ref DataNode value; object["masks"].array) {
+                masks_[i] = value.deserialize!MaskBinding();
+            }
+        }
+    }
+
+    /**
+        Called when the node is to finalize its deserialization from disk.
+    */
+    override
+    void onFinalize() @nogc {
+        super.finalize();
+
+        foreach_reverse(i; 0..masks_.length) {
+            if (Visual nMask = puppet.find!Visual(masks_[i].maskSrcGUID)) {
+                masks_[i].maskSrc = nMask;
+                continue;
+            }
+
+            // Mask not found, remove index.
+            masks_.removeAt(i);
+        }
+        this.updateCounts();
+    }
+
 public:
+
+    /**
+        The amount of masks in $(D Mask) mode applied to this Visual.
+    */
+    @property size_t maskCount() pure => maskCount_;
+
+    /**
+        The amount of masks in $(D Dodge) mode applied to this Visual.
+    */
+    @property size_t dodgeCount() pure => dodgeCount_;
+
+    /**
+        List of masks to apply
+    */
+    @property MaskBinding[] masks() => masks_[0..$];
 
     /**
         Whether the renderer should delegate rendering logic
         to the visual node.
     */
     @property bool isDelegated() @nogc => false;
-}
-mixin Register!(Visual, in_node_registry);
 
-/**
-    Finds visuals that are within the hirearchy of the given node.
-
-    Params:
-        root =              The root node to start looking from
-        list =              The list to write to, the list may be resized by the
-                            implementation.
-        recurseDelegates =  Whether to recurse through delegate visuals.
-*/
-void findVisuals(Node root, ref Visual[] list, bool recurseDelegates=false) @nogc {
-    static void findVisualsImpl(Node node, ref Visual[] list, bool recurseDelegates=false) @nogc {
-        if (!node) return;
-        
-        if (auto visual = cast(Visual)node) {
-            if (!visual.enabled)
-                return;
-            
-            list = list.nu_resize(list.length+1);
-            list[$-1] = visual;
-
-            if (!visual.isDelegated || recurseDelegates) {
-                foreach(child; node.children) {
-                    child.findVisualsImpl(list, recurseDelegates);
-                }
-            }
-        } else {
-            foreach(child; node.children) {
-                child.findVisualsImpl(list, recurseDelegates);
-            }
-        }
+    /// Destructor
+    ~this() {
+        masks_.clear();
     }
 
-    nu_freea(list);
-    root.findVisualsImpl(list, recurseDelegates);
-}
+    /**
+        Gets whether this visual is masked by the given other visual.
 
-/**
-    Sort nodes by their
-*/
-void sortNodes(ref Node[] nodes) {
+        Params:
+            visual = The visual to query.
 
+        Returns:
+            $(D true) if this visual is masked by $(D visual),
+            $(D false) otherwise.
+    */
+    bool isMaskedBy(Visual visual) {
+        foreach(mask; masks) {
+            if (mask.maskSrc.guid == visual.guid)
+                return true;
+        }
+        return false;
+    }
+
+    /**
+        Gets the mask index of the given visual.
+
+        Params:
+            visual = The visual to search for.
+        
+        Returns:
+            Positive integer on success,
+            $(D -1) if the visual was not found.
+    */
+    ptrdiff_t getMaskIndex(Visual visual) {
+        if (visual is null)
+            return -1;
+
+        foreach(i, ref mask; masks) {
+            if (mask.maskSrc.guid == visual.guid)
+                return i;
+        }
+        return -1;
+    }
+
+    /**
+        Gets the mask index of the given visual.
+
+        Params:
+            guid = The GUID of the visual to search for.
+        
+        Returns:
+            Positive integer on success,
+            $(D -1) if the visual was not found.
+    */
+    ptrdiff_t getMaskIndex(GUID guid) {
+        foreach(i, ref mask; masks) {
+            if (mask.maskSrc.guid == guid)
+                return i;
+        }
+        return -1;
+    }
 }
+mixin Register!(Visual, in_node_registry);
 
 /**
     A binding between a mask and a mode
@@ -78,21 +205,21 @@ struct MaskBinding {
 public:
     GUID maskSrcGUID;
     MaskingMode mode;
-    Drawable maskSrc;
+    Visual maskSrc;
 
     /**
         Serialization function
     */
-    void onSerialize(ref JSONValue object, bool recursive = true) {
+    void onSerialize(ref DataNode object, bool recursive = true) @nogc {
         auto srcGuid = maskSrcGUID.toString();
-        object["source"] = srcGuid.dup;
-        object["mode"] = mode;
+        object["source"] = srcGuid[];
+        object["mode"] = cast(uint)mode;
     }
 
     /**
         Deserialization function
     */
-    void onDeserialize(ref JSONValue object) {
+    void onDeserialize(ref DataNode object) @nogc {
         maskSrcGUID = object.tryGetGUID("source", "source");
         mode = object.tryGet!string("mode", null).toMaskingMode;
     }

@@ -1,15 +1,20 @@
+/**
+    Root Puppet Object
+
+    Copyright © 2025, Inochi2D Project
+    Distributed under the 2-Clause BSD License, see LICENSE file.
+    
+    Authors: Luna Nielsen
+*/
 module inochi2d.core.puppet;
-import inochi2d.core.format;
+import inochi2d.core.serde;
 import inochi2d.core.render;
 import inochi2d.core.math;
 import inochi2d.core;
+import inp.format;
 import std.algorithm.sorting;
 import std.algorithm.mutation : SwapStrategy;
-import std.exception;
-import std.format;
-import std.file;
-import std.path : extension;
-import std.json;
+import nulib.io.stream;
 import nulib;
 import numem;
 
@@ -21,7 +26,7 @@ enum NO_THUMBNAIL = uint.max;
 /**
     Puppet properties
 */
-class PuppetProperties : ISerializable, IDeserializable {
+class PuppetProperties : NuObject, ISerializable, IDeserializable {
 public:
 
     /**
@@ -70,7 +75,7 @@ public:
     /**
         Serializes the type.
     */
-    void onSerialize(ref JSONValue object, bool recursive = true) {
+    void onSerialize(ref DataNode object, bool recursive = true) @nogc {
 
         // General Properties.
         object["name"] = name[];
@@ -89,7 +94,7 @@ public:
     /**
         Deserializes the type.
     */
-    void onDeserialize(ref JSONValue object) {
+    void onDeserialize(ref DataNode object) @nogc {
         object.tryGetRef(physicsPixelsPerMeter, "pixelsPerMeter");
         object.tryGetRef(physicsGravity, "gravity");
     }
@@ -98,107 +103,47 @@ public:
 /**
     A puppet
 */
-class Puppet : ISerializable, IDeserializable {
+class Puppet : NuRefCounted, ISerializable, IDeserializable {
 private:
-    /**
-        The drawlist that the puppet passes to its nodes.
-    */
+@nogc:
+
+    // The drawlist that the puppet passes to its nodes.
     DrawList drawList_;
 
-    /**
-        An internal puppet root node
-    */
-    Node puppetRootNode;
+    // A list of parts that are not masked by other parts
+    Visual[] visuals_;
 
-    /**
-        A list of parts that are not masked by other parts
+    // A list of drivers that need to run to update the puppet
+    Driver[] drivers_;
 
-        for Z sorting
-    */
-    Node[] rootParts;
+    // A list of parameters attached to the puppet.
+    vector!Parameter parameters_;
 
-    /**
-        A list of drivers that need to run to update the puppet
-    */
-    Driver[] drivers;
+    // A dictionary of named animations
+    vector!Animation animations_;
 
-    /**
-        A list of parameters that are driven by drivers
-    */
-    Driver[Parameter] drivenParameters;
+    // A list of parameters that are driven by drivers
+    weak_map!(Parameter, Driver) driven_;
 
-    /**
-        A dictionary of named animations
-    */
-    Animation[string] animations;
+    // Extended Vendor Data
+    weak_map!(string, ubyte[]) vendorData_;
 
-    void scanPartsRecurse(ref Node node, bool driversOnly = false) {
+    void scanParts(ref Node node) {
+        node.findVisuals(visuals_);
+        node.findNodes!Driver(drivers_);
 
-        // Don't need to scan null nodes
-        if (node is null) return;
-
-        // Collect Drivers
-        if (Driver driver = cast(Driver)node) {
-            drivers ~= driver;
+        driven_.clearContents();
+        foreach(driver; drivers_) {
             foreach(Parameter param; driver.affectedParameters)
-                drivenParameters[param] = driver;
-            
-        } else if (!driversOnly) {
-            // Collect drawable nodes only if we aren't inside a Composite node
-
-            if (Composite composite = cast(Composite)node) {
-                // Composite nodes handle and keep their own root node list, as such we should just draw them directly
-                composite.scanParts();
-                rootParts ~= composite;
-
-                // For this subtree, only look for Drivers
-                driversOnly = true;
-            } else if (Part part = cast(Part)node) {
-                // Collect Part nodes
-                rootParts ~= part;
-            }
-            // Non-part nodes just need to be recursed through,
-            // they don't draw anything.
-        }
-
-        // Recurse through children nodes
-        foreach(child; node.children) {
-            scanPartsRecurse(child, driversOnly);
+                driven_[param] = driver;
         }
     }
 
-    void scanParts(bool reparent = false)(ref Node node) {
-
-        // We want rootParts to be cleared so that we
-        // don't draw the same part multiple times
-        // and if the node tree changed we want to reflect those changes
-        // not the old node tree.
-        rootParts = [];
-
-        // Same for drivers
-        drivers = [];
-        drivenParameters.clear();
-
-        this.scanPartsRecurse(node);
-
-        // To make sure the GC can collect any nodes that aren't referenced
-        // anymore, we clear its children first, then assign its new child
-        // to our "new" root node. In some cases the root node will be
-        // quite different.
-        static if (reparent) { 
-            if (puppetRootNode !is null) puppetRootNode.clearChildren();
-            node.parent = puppetRootNode;
-        }
+    void resort() {
+        sortNodes(visuals_);
     }
 
-    void selfSort() {
-        import std.math : cmp;
-        sort!((a, b) => cmp(
-            a.zSort, 
-            b.zSort) > 0, SwapStrategy.stable)(rootParts);
-    }
-
-    Node findNode(Node n, string name) {
+    Node findNode(Node n, string name) @nogc {
 
         // Name matches!
         if (n.name == name) return n;
@@ -212,7 +157,7 @@ private:
         return null;
     }
 
-    Node findNode(Node n, GUID guid) {
+    Node findNode(Node n, GUID guid) @nogc {
 
         // Name matches!
         if (n.guid == guid) return n;
@@ -226,75 +171,100 @@ private:
         return null;
     }
 
+    /// Loads textures from a DataNode into the texture cache.
+    void loadTextures(ref DataNode node) {
+        assert(textureCache !is null, "Texture cache is invalid!");
+        assert(node.isArray, "Not a texture cache array!");
+
+        texLoadLoop: foreach(i, ref DataNode texture; node.array) {
+            TextureData textureData;
+            
+            // Skip invalid texture indices.
+            if (!texture.isObject || "encoding" !in texture || "data" !in texture)
+                continue;
+            
+            uint encoding = texture["encoding"].tryCoerce!int(-1);
+            ubyte[] data = texture["data"].blob;
+            
+            // Invalid data?
+            if (encoding == -1 || data.length == 0)
+                continue;
+            
+            // Handle different encodings.
+            switch(encoding) {
+                case INP_TEX_FMT_PNG:
+                case INP_TEX_FMT_TGA:
+                    textureData = TextureData.load(data);
+                    break;
+
+                case INP_TEX_FMT_BC7:
+                    assert(0, "BC7 not implemented yet!");
+                    continue texLoadLoop;
+                
+                default:
+                    // Unknown format.
+                    continue texLoadLoop;
+            }
+            textureCache.add(Texture.createForData(textureData.move()));
+        }
+    }
+
 protected:
 
 
     /**
         Serializes a puppet into an existing object.
     */
-    void onSerialize(ref JSONValue object, bool recursive) {
+    void onSerialize(ref DataNode object, bool recursive) @nogc {
         object["properties"] = properties.serialize();
 
         // Create objects for nodes, params, automation and animation.
         object["nodes"] = root.serialize();
-        object["param"] = parameters.serialize();
-        object["animations"] = animations.serialize();
+        object["param"] = parameters_.serialize();
+        object["animations"] = animations_.serialize();
     }
 
     /**
         Deserializes a puppet
     */
-    void onDeserialize(ref JSONValue object) {
+    void onDeserialize(ref DataNode object) @nogc {
         
         // Invalid type.
-        if (!object.isJsonObject)
+        if (!object.isObject)
             return;
 
-        object.tryGetRef(properties, "settings");
-        object.tryGetRef(root, "nodes");
-        object.tryGetRef(parameters, "param");
-        object.tryGetRef(animations, "animations");
+        // Just set to basic initialized object if none was found.
+        object.tryGetRef(properties, "properties", properties); 
 
         // Legacy "meta" key.
-        if (object.hasKey("meta")) {
+        if ("meta" in object) {
             object["meta"].tryGetRef(properties.graphicsUsePointFiltering, "preservePixels");
         }
 
         // Legacy "physics" key.
-        if (object.hasKey("physics")) {
+        if ("physics" in object) {
             object["physics"].tryGetRef(properties.physicsPixelsPerMeter, "pixelsPerMeter");
             object["physics"].tryGetRef(properties.physicsGravity, "gravity");
         }
 
-        this.reconstruct();
-        this.finalize();
+        object.tryGetRef(root, "nodes");
+        if ("param" in object)
+            object["param"].deserialize(parameters_);
+        if ("animation" in object)
+            object["animations"].deserialize(animations_);
     }
 
-    void reconstruct() {
-        this.root.reconstruct();
-        foreach(parameter; parameters.dup) {
-            parameter.reconstruct(this);
-        }
-        foreach(ref animation; animations.dup) {
-            animation.reconstruct(this);
-        }
-    }
-
-    void finalize() {
-        this.root.setPuppet(this);
-        this.root.name = "Root";
-        this.puppetRootNode = new Node(this);
+    void onFinalize() @nogc {
 
         // Finally update link etc.
         this.root.finalize();
-        foreach(parameter; parameters) {
+        foreach(parameter; parameters_) {
             parameter.finalize(this);
         }
-        foreach(ref animation; animations) {
+        foreach(ref animation; animations_) {
             animation.finalize(this);
         }
-        this.scanParts!true(this.root);
-        this.selfSort();
+        this.scanParts(this.root);
     }
 
 public:
@@ -308,11 +278,6 @@ public:
         The root node of the puppet
     */
     Node root;
-
-    /**
-        Parameters
-    */
-    Parameter[] parameters;
 
     /**
         INP Texture slots for this puppet
@@ -344,7 +309,27 @@ public:
     /**
         The active draw list for the puppet.
     */
-    @property DrawList drawList() @nogc => drawList_;
+    final @property DrawList drawList() @nogc => drawList_;
+
+    /**
+        A read-only slice of the root visuals being rendered.
+    */
+    final @property Visual[] visuals() => visuals_;
+
+    /**
+        A read-only slice of drivers
+    */
+    final @property Driver[] drivers() => drivers_;
+
+    /**
+        A read-only slice of animations attached to this puppet.
+    */
+    final @property Animation[] animations() => animations_[];
+
+    /**
+        A read-only slice of animations attached to this puppet.
+    */
+    final @property Parameter[] parameters() => parameters_[];
 
     // Destructor
     ~this() {
@@ -355,32 +340,126 @@ public:
     }
 
     /**
-        Creates a new puppet from nothing ()
+        Constructs a new, empty puppet.
+
+        Params:
+            cache = The texture cache to use during construction.
+            root =  The node to put as the root of the puppet.
     */
-    this(TextureCache cache = null) {
+    this(TextureCache cache = null, Node root = null) {
         this.properties = nogc_new!PuppetProperties(this);
-
-        this.puppetRootNode = new Node(this); 
-        this.root = new Node(this.puppetRootNode); 
-        this.root.name = "Root";
-
         this.textureCache = cache ? cache : nogc_new!TextureCache();
         this.drawList_ = nogc_new!DrawList();
+
+        // Setup root node
+        this.root = root ? root : nogc_new!Node(this);
+        this.root.setPuppet(this);
+        this.root.name = "Root";
+        this.scanParts(this.root);
     }
 
     /**
         Creates a new puppet from a node tree
     */
     this(Node root) {
-        this.properties = nogc_new!PuppetProperties(this);
-        this.root = root;
-        this.puppetRootNode = new Node(this);
-        this.root.name = "Root";
-        this.scanParts!true(this.root);
-        this.selfSort();
+        this(null, root);
+    }
 
-        this.drawList_ = nogc_new!DrawList();
-        this.textureCache = nogc_new!TextureCache();
+    version(WebAssembly) { } else {
+
+        /**
+            Loads a $(D Puppet) from a file.
+
+            Params:
+                path =  Path to the file to load.
+            
+            Notes:
+                Not available when compiling for WebAssembly.
+        */
+        static Result!Puppet fromFile(string path) @nogc {
+            import nulib.io.stream.file : FileStream;
+
+            if (FileStream fstream = nogc_new!FileStream(path, "r+b")) {
+                return Puppet.fromStream(fstream);
+            }
+            return error!Puppet("Could not open file.");
+        }
+    }
+
+    /**
+        Loads a $(D Puppet) from a Stream.
+
+        Params:
+            stream =    The readable stream to load the puppet from.
+    */
+    static Result!Puppet fromStream(Stream stream) @nogc {
+        assert(stream);
+        assert(stream.canRead);
+        
+        auto result = stream.readINP();
+        if (!result)
+            return error!Puppet(result.error);
+
+        DataNode node = result.get();
+        if (INP_TAG_PAYLOAD !in node)
+            return error!Puppet("No payload was found in the model!");
+        
+        // Create new puppet and deserialize the data.
+        Puppet puppet = nogc_new!Puppet(nogc_new!TextureCache());
+        puppet.deserialize(node);
+        return ok(puppet);
+    }
+
+    /**
+        Loads a $(D Puppet) from a Stream.
+
+        Params:
+            stream = The readable stream to load the puppet from.
+    */
+    final bool toStream(Stream stream) @nogc {
+        assert(stream);
+        assert(stream.canWrite);
+
+        // Prepare data node.
+        DataNode data = DataNode.createObject();
+        data[INP_TAG_PAYLOAD] = DataNode.createObject();
+        data[INP_TAG_TEXTURES] = DataNode.createArray();
+
+        // Serialize data
+        return false;
+    }
+
+    /**
+        Serializes a puppet.
+
+        Params:
+            node =  The payload DataNode to deserialize from.
+    */
+    final void serialize(ref DataNode node) {
+        assert(node.isObject, "Target DataNode was not an Object!");
+        node[INP_TAG_PAYLOAD] = DataNode.createObject();
+        this.onSerialize(node[INP_TAG_PAYLOAD], true);
+    }
+
+    /**
+        Deserializes a Puppet from a payload $(D DataNode).
+
+        Params:
+            node =  The payload DataNode to deserialize from.
+    */
+    final void deserialize(ref DataNode node) @nogc {
+        assert(INP_TAG_PAYLOAD in node, "No payload was found!");
+        assert(node[INP_TAG_PAYLOAD].isObject, "Invalid payload object.");
+
+        // NOTE:    Deserialization happens in multiple steps,
+        //          1. Load textures from TEX_SECT, assigning texture IDs.
+        //          2. Deserialize payload, (this MUST be present.)
+        //          3. Finalize any data.
+        if (INP_TAG_TEXTURES in node)
+            this.loadTextures(node[INP_TAG_TEXTURES]);
+        
+        this.onDeserialize(node[INP_TAG_PAYLOAD]);
+        this.onFinalize();
     }
 
     /**
@@ -394,19 +473,19 @@ public:
         if (renderParameters) {
 
             // Update parameters
-            foreach(parameter; parameters) {
+            foreach(parameter; parameters_) {
 
-                if (!enableDrivers || parameter !in drivenParameters)
+                if (!enableDrivers || parameter !in driven_)
                     parameter.update();
             }
         }
 
         // Ensure the transform tree is updated
-        root.transformChanged();
+        root.notifyTransformChanged();
 
         if (renderParameters && enableDrivers) {
             // Update parameter/node driver nodes (e.g. physics)
-            foreach(driver; drivers) {
+            foreach(driver; drivers_) {
                 driver.updateDriver(delta);
             }
         }
@@ -419,8 +498,8 @@ public:
     /**
         Reset drivers/physics nodes
     */
-    final void resetDrivers() {
-        foreach(driver; drivers) {
+    final void resetDrivers() @nogc {
+        foreach(driver; drivers_) {
             driver.reset();
         }
     }
@@ -428,8 +507,8 @@ public:
     /**
         Returns the index of a parameter by name
     */
-    ptrdiff_t findParameterIndex(string name) {
-        foreach(i, parameter; parameters) {
+    ptrdiff_t findParameterIndex(string name) @nogc {
+        foreach(i, parameter; parameters_) {
             if (parameter.name == name) {
                 return i;
             }
@@ -440,8 +519,8 @@ public:
     /**
         Returns a parameter by GUID
     */
-    Parameter findParameter(GUID guid) {
-        foreach(i, parameter; parameters) {
+    Parameter findParameter(GUID guid) @nogc {
+        foreach(i, parameter; parameters_) {
             if (parameter.guid == guid) {
                 return parameter;
             }
@@ -453,7 +532,7 @@ public:
         Gets if a node is bound to ANY parameter.
     */
     bool getIsNodeBound(Node n) {
-        foreach(i, parameter; parameters) {
+        foreach(i, parameter; parameters_) {
             if (parameter.hasAnyBinding(n)) return true;
         }
         return false;
@@ -463,26 +542,28 @@ public:
         Draws the puppet
     */
     final void draw(float delta) {
-        this.selfSort();
+        this.resort();
 
-        foreach(rootPart; rootParts) {
-            if (!rootPart.renderEnabled) 
+        foreach(visual; visuals_) {
+            if (!visual.renderEnabled) 
                 continue;
             
-            rootPart.draw(delta, drawList_);
+            visual.draw(delta, drawList_);
         }
     }
 
     /**
         Removes a parameter from this puppet
     */
+    void addParameter(Parameter param) {
+        parameters_ ~= param;
+    }
+
+    /**
+        Removes a parameter from this puppet
+    */
     void removeParameter(Parameter param) {
-        import std.algorithm.searching : countUntil;
-        import std.algorithm.mutation : remove;
-        ptrdiff_t idx = parameters.countUntil(param);
-        if (idx >= 0) {
-            parameters = parameters.remove(idx);
-        }
+        parameters_.remove(param);
     }
 
     /**
@@ -491,59 +572,34 @@ public:
         Run this every time you change the layout of the puppet's node tree
     */
     final void rescanNodes() {
-        this.scanParts!false(root);
+        this.scanParts(root);
     }
 
     /**
         Finds Node by its name
     */
-    T find(T = Node)(string name) if (is(T : Node)) {
+    T find(T = Node)(string name) @nogc if (is(T : Node)) {
         return cast(T)findNode(root, name);
     }
 
     /**
         Finds Node by its unique id
     */
-    T find(T = Node)(GUID guid) if (is(T : Node)) {
+    T find(T = Node)(GUID guid) @nogc if (is(T : Node)) {
         return cast(T)findNode(root, guid);
-    }
-
-    /**
-        Returns all the parts in the puppet
-    */
-    Part[] getAllParts() {
-        return findNodesType!Part(root);
-    }
-
-    /**
-        Finds nodes based on their type
-    */
-    T[] findNodesType(T)(Node n) if (is(T : Node)) {
-        T[] nodes;
-
-        if (T item = cast(T)n) {
-            nodes ~= item;
-        }
-
-        // Recurse through children
-        foreach(child; n.children) {
-            nodes ~= findNodesType!T(child);
-        }
-
-        return nodes;
     }
 
     /**
         Adds a texture to a new slot if it doesn't already exist within this puppet
     */
-    final uint addTextureToSlot(Texture texture) {
+    final uint addTextureToSlot(Texture texture) @nogc {
         return textureCache.add(texture);
     }
 
     /**
         Sets thumbnail of this puppet
     */
-    final void setThumbnail(Texture texture) {
+    final void setThumbnail(Texture texture) @nogc {
         textureCache.add(texture);
         this.properties.thumbnail = texture;
     }
@@ -553,60 +609,8 @@ public:
 
         returns -1 if none was found
     */
-    final ptrdiff_t getTextureSlotIndexFor(Texture texture) {
+    final ptrdiff_t getTextureSlotIndexFor(Texture texture) @nogc {
         return textureCache.find(texture);
-    }
-
-    /**
-        Serializes a puppet.
-    */
-    JSONValue serialize() {
-        JSONValue object = JSONValue.emptyObject;
-        this.onSerialize(object, true);
-        return object;
-    }
-
-    /**
-        Deserializes a puppet
-    */
-    static Puppet deserialize(ref JSONValue object, TextureCache cache) {
-        Puppet p = new Puppet(cache);
-        p.onDeserialize(object);
-        return p;
-    }
-
-    /**
-        Gets the internal root parts array 
-
-        Do note that some root parts may be Composites instead.
-    */
-    final 
-    ref Node[] getRootParts() {
-        return rootParts;
-    }
-
-    /**
-        Gets a list of drivers
-    */
-    final
-    ref Driver[] getDrivers() {
-        return drivers;
-    }
-
-   /**
-        Gets a mapping from parameters to their drivers
-    */
-    final
-    ref Driver[Parameter] getParameterDrivers() {
-        return drivenParameters;
-    }
-
-    /**
-        Gets the animation dictionary
-    */
-    final
-    ref Animation[string] getAnimations() {
-        return animations;
     }
 
     /**

@@ -41,11 +41,11 @@ public:
             if (anim._name == name) return anim;
         }
 
-        // Create new playback
-        if (Animation* anim = name in puppet.getAnimations()) {
-            playingAnimations ~= new AnimationPlayback(this, anim, name);
-            return playingAnimations[$-1];
-        }
+        // // Create new playback
+        // if (Animation* anim = name in puppet.animations()) {
+        //     playingAnimations ~= new AnimationPlayback(this, anim, name);
+        //     return playingAnimations[$-1];
+        // }
 
         // Invalid state
         return null;

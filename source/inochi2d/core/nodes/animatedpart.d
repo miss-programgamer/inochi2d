@@ -1,5 +1,5 @@
-module inochi2d.core.nodes.drawable.apart;
-import inochi2d.core.nodes.drawable.part;
+module inochi2d.core.nodes.animatedpart;
+import inochi2d.core.nodes.part;
 import inochi2d.core;
 import inochi2d.core.math;
 

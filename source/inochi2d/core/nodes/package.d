@@ -7,16 +7,20 @@
     Authors: Luna Nielsen
 */
 module inochi2d.core.nodes;
-import inochi2d.core.format;
+import inochi2d.core.serde;
 import inochi2d.core.math;
 import inochi2d.core.guid;
 import inochi2d.core;
 import nulib.string;
+import numem;
+import nulib;
 
-public import inochi2d.core.nodes.drawable;
 public import inochi2d.core.nodes.composite;
 public import inochi2d.core.nodes.deformer;
 public import inochi2d.core.nodes.drivers; 
+public import inochi2d.core.nodes.visual;
+public import inochi2d.core.nodes.part;
+public import inochi2d.core.nodes.animatedpart;
 public import inochi2d.core.registry;
 
 import core.attribute : standalone;
@@ -31,23 +35,24 @@ __gshared TypeRegistry!Node in_node_registry;
     A node in the Inochi2D rendering tree
 */
 @TypeId("Node", 0x00000000)
-class Node : ISerializable, IDeserializable {
+class Node : NuRefCounted, ISerializable, IDeserializable {
 private:
     Puppet puppet_;
     Node parent_;
-    Node[] children_;
+    weak_vector!Node children_;
     GUID guid_;
     float zsort_ = 0;
     bool lockToRoot_;
     string nodePath_;
     uint nid_;
+    bool recalculateTransform = true;
 
 package(inochi2d):
 
     /**
         Needed for deserialization
     */
-    void setPuppet(Puppet puppet) {
+    void setPuppet(Puppet puppet) @nogc {
         this.puppet_ = puppet;
     }
 
@@ -56,11 +61,7 @@ protected:
     /**
         The Node's numeric ID
     */
-    final @property uint nid() => nid_;
-
-    bool recalculateTransform = true;
-    bool preProcessed  = false;
-    bool postProcessed = false;
+    final @property uint nid() @nogc pure => nid_;
 
     /**
         The offset to the transform to apply
@@ -77,6 +78,119 @@ protected:
         if (parent !is null) parent.resetMask();
     }
 
+    /**
+        Serializes this node to a DataNode.
+
+        Params:
+            object =    The DataNode to serialize to.
+            recursive = Whether to recurse through children.
+    */
+    void onSerialize(ref DataNode object, bool recursive = true) @nogc {
+        nstring guid = guid_.toString();
+        object["guid"] = guid[];
+        object["name"] = name[];
+        object["type"] = typeId.sid;
+        object["enabled"] = enabled;
+        object["zsort"] = zsort_;
+        object["transform"] = zsort_;
+        object["lockToRoot"] = lockToRoot_;
+
+        // Recurse through children if enabled.
+        if (recursive) {
+            object["children"] = DataNode.createArray();
+            foreach(child; children) {
+                auto childObject = DataNode.createObject();
+                child.serialize(childObject);
+
+                object["children"] ~= childObject;
+            }
+        }
+    }
+
+    /**
+        Deserializes this node from a DataNode.
+
+        Params:
+            object = The DataNode to deserialize from.
+    */
+    void onDeserialize(ref DataNode object) @nogc {
+
+        this.guid_ = object.tryGetGUID("uuid", "guid");
+        object.tryGetRef(name, "name");
+        object.tryGetRef(enabled, "enabled");
+        object.tryGetRef(zsort_, "zsort");
+        object.tryGetRef(localTransform, "transform");
+        object.tryGetRef(lockToRoot_, "lockToRoot");
+
+        // Pre-populate our children with the correct types
+        if ("children" in object && object["children"].isArray) {
+            foreach(ref child; object["children"].array) {
+                
+                // Fetch type from json
+                if (string type = child.tryGet!string("type", null)) {
+
+                    // Skips unknown node types
+                    // TODO: A logging system that shows a warning for this?
+                    if (!in_node_registry.has(type))
+                        continue;
+
+                    // NOTE:    inInstantiateNode implicitly handles setting the
+                    //          Parent-child relationship, so we don't need to do
+                    //          anything else besides pass it onto the child's
+                    //          deserializer.
+                    Node n = in_node_registry.create(type);
+                    n.parent = this;
+                    child.deserialize(n);
+                }
+            }
+        }
+    }
+
+    /**
+        Called when the node is to finalize its deserialization from disk.
+    */
+    void onFinalize() @nogc {
+        nid_ = typeId.nid;
+        foreach(child; children) {
+            child.onFinalize();
+        }
+    }
+
+    /**
+        Called during the early update phase of a new frame.
+        
+        Params:
+            drawList =  The drawlist for the active scene.
+    */
+    void onPreUpdate(DrawList drawList) @nogc { }
+
+    /**
+        Called during the update phase of a new frame.
+        
+        Params:
+            delta =     Time since the last frame.
+            drawList =  The drawlist for the active scene.
+    */
+    void onUpdate(float delta, DrawList drawList) @nogc { }
+
+    /**
+        Called during the late update phase of a new frame.
+        
+        Params:
+            drawList =  The drawlist for the active scene.
+    */
+    void onPostUpdate(DrawList drawList) @nogc { }
+
+    /**
+        Called when the node is to be redrawn.
+        
+        Params:
+            delta =     Time since the last frame.
+            drawList =  The drawlist for the active scene.
+            mode =      The masking mode to draw with.
+    */
+    void onDraw(float delta, DrawList drawList, MaskingMode mode = MaskingMode.none) @nogc { }
+
 public:
 
     /**
@@ -92,7 +206,7 @@ public:
     /**
         The Node's Type ID
     */
-    final @property TypeId typeId() => in_node_registry.lookup(this);
+    final @property TypeId typeId() @nogc => in_node_registry.lookup(this);
 
     /**
         The node's GUID.
@@ -147,24 +261,32 @@ public:
         lockToRoot_ = value;
     }
 
+    ~this() {
+        foreach(child; children_) {
+            child.release();
+        }
+        children_.clear();
+    }
+
     /**
         Constructs a new puppet root node
     */
-    this(Puppet puppet) {
+    this(Puppet puppet) @nogc {
         this.puppet_ = puppet;
+        this.guid_ = inNewGUID();
     }
 
     /**
         Constructs a new node
     */
-    this(Node parent = null) {
+    this(Node parent = null) @nogc {
         this(inNewGUID(), parent);
     }
 
     /**
         Constructs a new node with an UUID
     */
-    this(GUID guid, Node parent = null) {
+    this(GUID guid, Node parent = null) @nogc {
         this.parent = parent;
         this.guid_ = guid;
     }
@@ -214,7 +336,7 @@ public:
     /**
         The transform in world space without locking
     */
-    Transform transformLocal() @nogc {
+    @property Transform transformLocal() @nogc {
         localTransform.update();
         
         return localTransform.calcOffset(transformOffset);
@@ -223,7 +345,7 @@ public:
     /**
         The transform in world space without locking
     */
-    Transform transformNoLock() @nogc {
+    @property Transform transformNoLock() @nogc {
         localTransform.update();
         
         if (parent !is null) return localTransform * parent.transform();
@@ -239,7 +361,7 @@ public:
         The parent of this node
     */
     final @property Node parent() @nogc nothrow pure => parent_;
-    final @property void parent(Node node) {
+    final @property void parent(Node node) @nogc {
         this.insertInto(node, OFFSET_END);
     }
 
@@ -325,7 +447,7 @@ public:
         foreach(child; children_) {
             child.parent_ = null;
         }
-        this.children_ = [];
+        this.children_.clear();
     }
 
     /**
@@ -335,34 +457,47 @@ public:
         child.parent = this;
     }
 
+    /**
+        Finds this node within its parent node.
+
+        Returns:
+            A positive value if this node was found,
+            otherwise $(D -1).
+    */
     final ptrdiff_t getIndexInParent() {
-        import std.algorithm.searching : countUntil;
-        return parent_.children_.countUntil(this);
+        return this.getIndexInNode(parent_);
     }
 
-    final ptrdiff_t getIndexInNode(Node n) {
-        import std.algorithm.searching : countUntil;
-        return n.children_.countUntil(this);
+    /**
+        Finds this node within the given node.
+
+        Params:
+            node = The node to look within
+
+        Returns:
+            A positive value if this node was found,
+            otherwise $(D -1).
+    */
+    final ptrdiff_t getIndexInNode(Node node) {
+        if (node) {
+            foreach(i, ref child; node.children_) {
+                if (child is this)
+                    return i;
+            }
+        }
+        return -1;
     }
 
     enum OFFSET_START = size_t.min;
     enum OFFSET_END = size_t.max;
-    final void insertInto(Node node, size_t offset) {
+    final void insertInto(Node node, size_t offset) @nogc {
         nodePath_ = null;
-        import std.algorithm.mutation : remove;
-        import std.algorithm.searching : countUntil;
         
         // Remove ourselves from our current parent if we are
         // the child of one already.
         if (parent_ !is null) {
-            
-            // Try to find ourselves in our parent
-            // note idx will be -1 if we can't be found
-            ptrdiff_t idx = parent_.children_.countUntil(this);
-            assert(idx >= 0, "Invalid parent-child relationship!");
-
-            // Remove ourselves
-            parent_.children_ = parent_.children_.remove(idx);
+            parent_.children_.remove(this);
+            parent_.release();
         }
 
         // If we want to become parentless we need to handle that
@@ -374,16 +509,18 @@ public:
 
         // Update our relationship with our new parent
         this.parent_ = node;
+        this.parent_.retain();
 
         // Update position
         if (offset == OFFSET_START) {
-            this.parent_.children_ = this ~ this.parent_.children_;
+            this.parent_.children_.insert(this, 0);
         } else if (offset == OFFSET_END || offset >= parent_.children_.length) {
             this.parent_.children_ ~= this;
         } else {
-            this.parent_.children_ = this.parent_.children_[0..offset] ~ this ~ this.parent_.children_[offset..$];
+            this.parent_.children_.insert(this, offset);
         }
-        if (this.puppet !is null) this.puppet.rescanNodes();
+        if (this.puppet !is null)
+            assumeNoThrowNoGC((Puppet puppet) { puppet.rescanNodes(); }, puppet);
     }
 
     /**
@@ -398,9 +535,16 @@ public:
     }
 
     /**
-        Return whether this node supports a parameter
+        Gets whether the node has the given parameter key.
+
+        Params:
+            key = The key to query.
+        
+        Returns:
+            $(D true) if the node has a key of the given name,
+            $(D false) otherwise.
     */
-    bool hasParam(string key) {
+    bool hasParam(string key) @nogc {
         switch(key) {
             case "zSort":
             case "transform.t.x":
@@ -418,9 +562,15 @@ public:
     }
 
     /**
-        Gets the default offset value
+        Gets the default value for a node parameter.
+
+        Params:
+            key =   The key to get.
+
+        Returns:
+            The default value for a given node parameter.
     */
-    float getDefaultValue(string key) {
+    float getDefaultValue(string key) @nogc {
         switch(key) {
             case "zSort":
             case "transform.t.x":
@@ -439,44 +589,52 @@ public:
     }
 
     /**
-        Sets offset value
+        Sets a node parameter value.
+
+        Params:
+            key =   The key to set.
+            value = The value to set.
+        
+        Returns:
+            $(D true) if the operation succeded,
+            $(D false) otherwise.
     */
-    bool setValue(string key, float value) {
+    bool setValue(string key, float value) @nogc {
         switch(key) {
             case "zSort":
                 offsetSort += value;
                 return true;
             case "transform.t.x":
                 transformOffset.translation.x += value;
-                transformChanged();
+                notifyTransformChanged();
                 return true;
             case "transform.t.y":
                 transformOffset.translation.y += value;
-                transformChanged();
+                notifyTransformChanged();
                 return true;
             case "transform.t.z":
                 transformOffset.translation.z += value;
-                transformChanged();
+                notifyTransformChanged();
                 return true;
             case "transform.r.x":
                 transformOffset.rotation.x += value;
-                transformChanged();
+                notifyTransformChanged();
                 return true;
             case "transform.r.y":
                 transformOffset.rotation.y += value;
-                transformChanged();
+                notifyTransformChanged();
                 return true;
             case "transform.r.z":
                 transformOffset.rotation.z += value;
-                transformChanged();
+                notifyTransformChanged();
                 return true;
             case "transform.s.x":
                 transformOffset.scale.x *= value;
-                transformChanged();
+                notifyTransformChanged();
                 return true;
             case "transform.s.y":
                 transformOffset.scale.y *= value;
-                transformChanged();
+                notifyTransformChanged();
                 return true;
             default: return false;
         }
@@ -493,7 +651,7 @@ public:
         since we consider preserving aspect ratio to be the user
         intent by default.
     */
-    float scaleValue(string key, float value, int axis, float scale) {
+    float scaleValue(string key, float value, int axis, float scale) @nogc {
         if (axis == -1) return value * scale;
 
         float newVal = abs(scale) * value;
@@ -515,7 +673,16 @@ public:
         return newVal;
     }
 
-    float getValue(string key) {
+    /**
+        Gets the parameter editable value for a given key.
+
+        Params:
+            key = The key to query.
+        
+        Returns:
+            The value of the given named node parameter.
+    */
+    float getValue(string key) @nogc {
         switch(key) {
             case "zSort":           return offsetSort;
             case "transform.t.x":   return transformOffset.translation.x;
@@ -531,13 +698,63 @@ public:
     }
 
     /**
-        Update sequence run before the main update sequence.
+        Deserializes this node from a DataNode.
+
+        Params:
+            object = The DataNode to deserialize from.
     */
-    void preUpdate(DrawList drawList) {
+    final void deserialize(ref DataNode object) @nogc {
+        this.onDeserialize(object);
+    }
+
+    /**
+        Serializes this node to a DataNode.
+
+        Params:
+            recursive = Whether to recurse through children.
+    */
+    final DataNode serialize(bool recursive = true) @nogc {
+        auto result = DataNode.createObject();
+        this.onSerialize(result, recursive);
+        return result;
+    }
+
+    /**
+        Serializes this node to a DataNode.
+
+        Params:
+            object =    The DataNode to serialize to.
+            recursive = Whether to recurse through children.
+    */
+    final void serialize(ref DataNode object, bool recursive = true) @nogc {
+        this.onSerialize(object, recursive);
+    }
+
+    /**
+        Finalizes this node and its children.
+    */
+    final void finalize() @nogc {
+        this.onFinalize();
+    }
+
+    /**
+        Runs a pre-update cycle for this node and its enabled children.
+
+        Params:
+            drawList =  The drawlist for the active scene.
+
+        Note:
+            This is generally called by the puppet and shouldn't be called
+            by you outside of circumstances where the puppet isn't
+            controlling rendering.
+    */
+    final void preUpdate(DrawList drawList) @nogc {
+        if (!enabled) return;
+
         transformOffset.clear();
         offsetSort = 0;
 
-        if (!enabled) return;
+        this.onPreUpdate(drawList);
         foreach(child; children_) {
             child.preUpdate(drawList);
         }
@@ -545,10 +762,20 @@ public:
 
     /**
         Updates the node
-    */
-    void update(float delta, DrawList drawList) {
 
+        Params:
+            delta =     Time since the last frame.
+            drawList =  The drawlist for the active scene.
+
+        Note:
+            This is generally called by the puppet and shouldn't be called
+            by you outside of circumstances where the puppet isn't
+            controlling rendering.
+    */
+    final void update(float delta, DrawList drawList) @nogc {
         if (!enabled) return;
+
+        this.onUpdate(delta, drawList);
         foreach(child; children) {
             child.update(delta, drawList);
         }
@@ -556,10 +783,19 @@ public:
 
     /**
         Update sequence run after the main update sequence.
+
+        Params:
+            drawList =  The drawlist for the active scene.
+
+        Note:
+            This is generally called by the puppet and shouldn't be called
+            by you outside of circumstances where the puppet isn't
+            controlling rendering.
     */
-    void postUpdate(DrawList drawList) {
-        
+    final void postUpdate(DrawList drawList) @nogc {
         if (!enabled) return;
+
+        this.onPostUpdate(drawList);
         foreach(child; children_) {
             child.postUpdate(drawList);
         }
@@ -567,96 +803,38 @@ public:
 
     /**
         Draws this node and it's subnodes
+        
+        Params:
+            delta =     Time since the last frame.
+            drawList =  The drawlist for the active scene.
+
+        Note:
+            This is generally called by the puppet and shouldn't be called
+            by you outside of circumstances where the puppet isn't
+            controlling rendering.
     */
-    void draw(float delta, DrawList drawList) { }
+    final void draw(float delta, DrawList drawList) @nogc {
+        this.onDraw(delta, drawList, MaskingMode.none);
+    }
 
     /**
-        Marks this node's transform (and its descendents') as dirty
+        Notifies this node and its children that the transform 
+        has changed.
     */
-    void transformChanged() {
+    void notifyTransformChanged() @nogc {
         recalculateTransform = true;
 
         foreach(child; children) {
-            child.transformChanged();
+            child.notifyTransformChanged();
         }
     }
 
-    override string toString() const {
+    /**
+        Gets the string representation of this object.
+    */
+    override
+    string toString() const {
         return name[];
-    }
-
-    void onSerialize(ref JSONValue object, bool recursive = true) {
-        nstring guid = guid_.toString();
-        object["guid"] = guid.dup;
-        object["name"] = name;
-        object["type"] = typeId.sid;
-        object["enabled"] = enabled;
-        object["zsort"] = zsort_;
-        object["transform"] = zsort_;
-        object["lockToRoot"] = lockToRoot_;
-
-        // Allow non-recursive serialization.
-        if (!recursive)
-            return;
-
-        object["children"] = JSONValue.emptyArray;
-        foreach(child; children) {
-            object["children"].array ~= child.serialize();
-        }
-    }
-
-    /**
-        Deserializes node from JSONValue formatted JSON data.
-    */
-    void onDeserialize(ref JSONValue object) {
-        this.guid_ = object.tryGetGUID("uuid", "guid");
-        object.tryGetRef(name, "name");
-        object.tryGetRef(enabled, "enabled");
-        object.tryGetRef(zsort_, "zsort");
-        object.tryGetRef(localTransform, "transform");
-        object.tryGetRef(lockToRoot_, "lockToRoot");
-
-        // Pre-populate our children with the correct types
-        if (object.isJsonArray("children")) {
-            foreach(child; object["children"].array) {
-                
-                // Fetch type from json
-                if (string type = child.tryGet!string("type", null)) {
-
-                    // Skips unknown node types
-                    // TODO: A logging system that shows a warning for this?
-                    if (!in_node_registry.has(type))
-                        continue;
-
-                    // NOTE:    inInstantiateNode implicitly handles setting the
-                    //          Parent-child relationship, so we don't need to do
-                    //          anything else besides pass it onto the child's
-                    //          deserializer.
-                    Node n = in_node_registry.create(type);
-                    n.parent = this;
-                    child.deserialize(n);
-                }
-            }
-        }
-    }
-
-    /**
-        Reconstructs a child.
-    */
-    void reconstruct() {
-        foreach(child; children.dup) {
-            child.reconstruct();
-        }
-    }
-
-    /**
-        Finalizes this node and any children
-    */
-    void finalize() {
-        nid_ = typeId.nid;
-        foreach(child; children) {
-            child.finalize();
-        }
     }
 
     rect getCombinedBoundsRect(bool reupdate = false, bool countPuppet=false)() {
@@ -728,3 +906,89 @@ public:
     }
 }
 mixin Register!(Node, in_node_registry);
+
+
+/**
+    Finds visuals that are within the hirearchy of the given node.
+
+    Params:
+        root =              The root node to start looking from
+        list =              The list to write to, the list may be resized by the
+                            implementation.
+        recurseDelegates =  Whether to recurse through delegate visuals.
+        sort =              Whether to sort the list of visuals.
+*/
+void findVisuals(Node root, ref Visual[] list, bool recurseDelegates=false, bool sort = true) @nogc {
+    static void findVisualsImpl(Node node, ref Visual[] list, bool recurseDelegates=false) @nogc {
+        if (!node) return;
+        
+        if (auto visual = cast(Visual)node) {
+            if (!visual.enabled)
+                return;
+            
+            list = list.nu_resize(list.length+1);
+            list[$-1] = visual;
+
+            if (!visual.isDelegated || recurseDelegates) {
+                foreach(child; node.children) {
+                    findVisualsImpl(child, list, recurseDelegates);
+                }
+            }
+        } else {
+
+            // Non-part nodes just need to be recursed through,
+            // they don't draw anything.
+            foreach(child; node.children) {
+                findVisualsImpl(child, list, recurseDelegates);
+            }
+        }
+    }
+
+    nu_freea(list);
+    findVisualsImpl(root, list, recurseDelegates);
+    if (sort) sortNodes(list);
+}
+
+/**
+    Finds all nodes of the given type (and subtypes) in the node tree.
+
+    Params:
+        root =  The root node to start searching from.
+        list =  The list to write the results to.
+*/
+void findNodes(T)(Node root, ref T[] list) @nogc 
+if (is(T : Node)) {
+    static void findNodesImpl(Node node, ref T[] list) @nogc {
+        if (!node) return;
+        
+        if (auto found = cast(T)node) {
+            list = list.nu_resize(list.length+1);
+            list[$-1] = found;
+        }
+
+        // Non-part nodes just need to be recursed through,
+        // they don't draw anything.
+        foreach(child; node.children) {
+            findNodesImpl(child, list);
+        }
+    }
+
+    nu_freea(list);
+    findNodesImpl(root, list);
+}
+
+/**
+    Sorts a slice of visuals in-place.
+
+    Params:
+        slice = The slice to sort.
+*/
+void sortNodes(T)(ref T[] slice) @nogc
+if (is(T : Node)) {
+    import inochi2d.core.sorting : in_sort;
+    import nulib.math.fixed : fixed32;
+
+    // HACK:    nulib doesn't have a float cmp function yet,
+    //          as such we convert sorting values to fixed.
+    in_sort!((Visual a, Visual b) => fixed32(a.zSort).data < fixed32(b.zSort).data)(slice);
+}

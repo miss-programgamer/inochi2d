@@ -8,7 +8,6 @@
 */
 module inochi2d.core.nodes.deformer.meshdeformer;
 import inochi2d.core.nodes.deformer;
-import inochi2d.core.nodes.drawable;
 import inochi2d.core.math;
 import inochi2d.core;
 import std.exception;
@@ -28,24 +27,127 @@ private:
     vec2[] deformDeltas_;
 
 protected:
+
     /**
-        Allows serializing self data (with pretty serializer)
+        Serializes this node to a DataNode.
+
+        Params:
+            object =    The DataNode to serialize to.
+            recursive = Whether to recurse through children.
     */
     override
-    void onSerialize(ref JSONValue object, bool recursive=true) {
+    void onSerialize(ref DataNode object, bool recursive=true) {
         super.onSerialize(object, recursive);
 
-        MeshData data = mesh.toMeshData();
+        // NOTE:    MeshData is set up to free its contents on
+        //          scope exit.
+        MeshData data = MeshData(mesh);
         object["mesh"] = data.serialize();
     }
 
+    /**
+        Deserializes this node from a DataNode.
+
+        Params:
+            object = The DataNode to deserialize from.
+    */
     override
-    void onDeserialize(ref JSONValue object) {
+    void onDeserialize(ref DataNode object) {
         super.onDeserialize(object);
         
         this.deformed_ = nogc_new!DeformedMesh();
         this.base_ = nogc_new!DeformedMesh();
         this.mesh = Mesh.fromMeshData(object.tryGet!MeshData("mesh"));
+    }
+
+    /**
+        Called during the early update phase of a new frame.
+        
+        Params:
+            drawList =  The drawlist for the active scene.
+    */
+    override
+    void onPreUpdate(DrawList drawList) {
+        super.onPreUpdate(drawList);
+        this.resetDeform();
+    }
+
+    /**
+        Called during the update phase of a new frame.
+        
+        Params:
+            delta =     Time since the last frame.
+            drawList =  The drawlist for the active scene.
+    */
+    override
+    void onUpdate(float delta, DrawList drawList) {
+        base_.pushMatrix(worldTransform.matrix);
+        deformed_.pushMatrix(worldTransform.matrix);
+        super.onUpdate(delta, drawList);
+    }
+
+    /**
+        Called during the late update phase of a new frame.
+        
+        Params:
+            drawList =  The drawlist for the active scene.
+    */
+    override
+    void onPostUpdate(DrawList drawList) {
+        
+        // No deltas?
+        if (deformDeltas_.length == 0) {
+            super.onPostUpdate(drawList);
+            return;
+        }
+
+        // Calculate the deltas from the world matrix.
+        foreach(i; 0..deformDeltas_.length)
+            deformDeltas_[i] = base_.points[i] - deformed_.points[i];
+
+        // Use the weights to deform each subpoint by a delta determined
+        // by the weight to each vertex in their triangle.
+        foreach(i, mesh; toDeform) {
+            foreach(j; 0..mesh.deformPoints.length) {
+                vec2 mp = mesh.deformPoints[j];
+
+                foreach(k; 0..deformed_.elementCount/3) {
+                    uint[3] idx = [
+                        mesh_.indices[(k*3)+0],
+                        mesh_.indices[(k*3)+1],
+                        mesh_.indices[(k*3)+2],
+                    ];
+                    Triangle tri = Triangle(
+                        base_.points[idx[0]],
+                        base_.points[idx[1]],
+                        base_.points[idx[2]],
+                    );
+
+                    // Do some cheaper checks first.
+                    float minX = min(tri.p1.x, tri.p2.x, tri.p3.x);
+                    float maxX = max(tri.p1.x, tri.p2.x, tri.p3.x);
+                    float minY = min(tri.p1.y, tri.p2.y, tri.p3.y);
+                    float maxY = max(tri.p1.y, tri.p2.y, tri.p3.y);
+                    if (!(minX < mp.x && maxX > mp.x) && 
+                        !(minY < mp.y && maxY > mp.y))
+                        continue;
+
+                    // Expensive check and barycentric coordinates.
+                    vec3 bc = tri.barycentric(mp);
+                    if (bc.x < 0 || bc.y < 0 || bc.z < 0)
+                        continue;
+
+                    mesh.deform(j, -(
+                        (deformDeltas_[idx[0]]*bc.x) +
+                        (deformDeltas_[idx[1]]*bc.y) +
+                        (deformDeltas_[idx[2]]*bc.z)
+                    ));
+                    break;
+                }
+            }
+        }
+
+        super.onPostUpdate(drawList);
     }
 
 public:
@@ -127,80 +229,6 @@ public:
     void resetDeform() {
         deformed_.reset();
         base_.reset();
-    }
-
-    override
-    void preUpdate(DrawList drawList) {
-        super.preUpdate(drawList);
-        this.resetDeform();
-    }
-
-    override
-    void update(float delta, DrawList drawList) {
-        base_.pushMatrix(worldTransform.matrix);
-        deformed_.pushMatrix(worldTransform.matrix);
-        super.update(delta, drawList);
-    }
-
-    /**
-        Updates the internal transformation matrix to apply to children.
-    */
-    override
-    void postUpdate(DrawList drawList) {
-        
-        // No deltas?
-        if (deformDeltas_.length == 0) {
-            super.postUpdate(drawList);
-            return;
-        }
-
-        // Calculate the deltas from the world matrix.
-        foreach(i; 0..deformDeltas_.length)
-            deformDeltas_[i] = base_.points[i] - deformed_.points[i];
-
-        // Use the weights to deform each subpoint by a delta determined
-        // by the weight to each vertex in their triangle.
-        foreach(i, mesh; toDeform) {
-            foreach(j; 0..mesh.deformPoints.length) {
-                vec2 mp = mesh.deformPoints[j];
-
-                foreach(k; 0..deformed_.elementCount/3) {
-                    uint[3] idx = [
-                        mesh_.indices[(k*3)+0],
-                        mesh_.indices[(k*3)+1],
-                        mesh_.indices[(k*3)+2],
-                    ];
-                    Triangle tri = Triangle(
-                        base_.points[idx[0]],
-                        base_.points[idx[1]],
-                        base_.points[idx[2]],
-                    );
-
-                    // Do some cheaper checks first.
-                    float minX = min(tri.p1.x, tri.p2.x, tri.p3.x);
-                    float maxX = max(tri.p1.x, tri.p2.x, tri.p3.x);
-                    float minY = min(tri.p1.y, tri.p2.y, tri.p3.y);
-                    float maxY = max(tri.p1.y, tri.p2.y, tri.p3.y);
-                    if (!(minX < mp.x && maxX > mp.x) && 
-                        !(minY < mp.y && maxY > mp.y))
-                        continue;
-
-                    // Expensive check and barycentric coordinates.
-                    vec3 bc = tri.barycentric(mp);
-                    if (bc.x < 0 || bc.y < 0 || bc.z < 0)
-                        continue;
-
-                    mesh.deform(j, -(
-                        (deformDeltas_[idx[0]]*bc.x) +
-                        (deformDeltas_[idx[1]]*bc.y) +
-                        (deformDeltas_[idx[2]]*bc.z)
-                    ));
-                    break;
-                }
-            }
-        }
-
-        super.postUpdate(drawList);
     }
 }
 mixin Register!(MeshDeformer, in_node_registry);

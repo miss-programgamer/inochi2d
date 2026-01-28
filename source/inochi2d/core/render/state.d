@@ -117,7 +117,7 @@ enum BlendMode : uint {
     sourceOut       = 0x12
 }
 
-BlendMode toBlendMode(string name) {
+BlendMode toBlendMode(string name) @nogc {
     switch(name) with(BlendMode) {
         default: return normal;
         case "Multiply": return multiply;
@@ -142,22 +142,28 @@ BlendMode toBlendMode(string name) {
 }
 
 /**
-    Masking mode
+    Masking mode flags, used to tell the renderer how to render
+    a visual.
 */
 enum MaskingMode : uint {
 
     /**
+        The part should not be rendered to the masking buffer.
+    */
+    none = 0,
+
+    /**
         The part should be masked by the drawables specified
     */
-    mask = 0,
+    mask = 1,
 
     /**
         The path should be dodge masked by the drawables specified
     */
-    dodge = 1,
+    dodge = 2,
 }
 
-MaskingMode toMaskingMode(string name) {
+MaskingMode toMaskingMode(string name) @nogc {
     switch(name) {
 
         case "Mask":

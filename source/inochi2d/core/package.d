@@ -14,7 +14,7 @@ public import inochi2d.core.puppet;
 public import inochi2d.core.mesh;
 public import inochi2d.core.param;
 public import inochi2d.core.animation;
-public import inochi2d.core.format;
+public import inochi2d.core.serde;
 public import inochi2d.core.phys;
 public import inochi2d.core.guid;
 public import inochi2d.core.math;

@@ -27,6 +27,9 @@ public import inochi2d.core.nodes.deformer.latticedeformer;
 abstract
 class Deformer : Node, IDeformable {
 private:
+@nogc:
+    weak_vector!IDeformable toDeform_;
+
     void scanPartsRecurse(Node node) {
 
         // Don't need to scan null nodes
@@ -34,7 +37,7 @@ private:
 
         // Do the main check
         if (IDeformable deformable = cast(IDeformable)node)
-            toDeform ~= deformable;
+            toDeform_ ~= deformable;
         
         // Deformers already deform their children, and we deform
         // them first, so don't exaggerate it through their children
@@ -48,27 +51,33 @@ private:
 protected:
 
     /**
-        A list of the nodes to deform.
-    */
-    IDeformable[] toDeform;
-    /**
-        Allows serializing self data (with pretty serializer)
+        Serializes this node to a DataNode.
+
+        Params:
+            object =    The DataNode to serialize to.
+            recursive = Whether to recurse through children.
     */
     override
-    void onSerialize(ref JSONValue object, bool recursive=true) {
+    void onSerialize(ref DataNode object, bool recursive=true) {
         super.onSerialize(object, recursive);
     }
 
+    /**
+        Deserializes this node from a DataNode.
+
+        Params:
+            object = The DataNode to deserialize from.
+    */
     override
-    void onDeserialize(ref JSONValue object) {
+    void onDeserialize(ref DataNode object) {
         super.onDeserialize(object);
     }
 
     /**
-        Finalizes the deformer.
+        Called when the node is to finalize its deserialization from disk.
     */
     override
-    void finalize() {
+    void onFinalize() @nogc {
         super.finalize();
         this.rescan();
     }
@@ -83,6 +92,11 @@ public:
     this(Node parent = null) {
         super(parent);
     }
+
+    /**
+        A list of the nodes to deform.
+    */
+    @property IDeformable[] toDeform() => toDeform_[0..$];
 
     /**
         The control points of the deformer.
@@ -167,7 +181,7 @@ public:
         Rescans the children of the deformer.
     */
     void rescan() {
-        toDeform.length = 0;
+        toDeform_.clear();
         foreach(child; children) {
             this.scanPartsRecurse(child);
         }

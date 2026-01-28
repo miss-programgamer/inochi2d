@@ -41,29 +41,34 @@ enum uint INP2_TAG_KEY          = 0xF0;
 enum uint INP2_TAG_NIL          = 0x00;
 
 /**
+    INP2 DataNode Tag for boolean values (padded to 32 bits)
+*/
+enum uint INP2_TAG_BOOL         = 0x01;
+
+/**
     INP2 DataNode Tag for 32-bit integers
 */
-enum uint INP2_TAG_INT          = 0x01;
+enum uint INP2_TAG_INT          = 0x02;
 
 /**
     INP2 DataNode Tag for 32-bit unsigned integers
 */
-enum uint INP2_TAG_UINT         = 0x02;
+enum uint INP2_TAG_UINT         = 0x03;
 
 /**
     INP2 DataNode Tag for 32-bit floats
 */
-enum uint INP2_TAG_FLOAT        = 0x03;
+enum uint INP2_TAG_FLOAT        = 0x04;
 
 /**
     INP2 DataNode Tag for UTF8 Strings
 */
-enum uint INP2_TAG_STRING       = 0x04;
+enum uint INP2_TAG_STRING       = 0x05;
 
 /**
     INP2 DataNode Tag for data blobs
 */
-enum uint INP2_TAG_BLOB         = 0x05;
+enum uint INP2_TAG_BLOB         = 0x06;
 
 /**
     INP2 DataNode Tag for an array beginning.

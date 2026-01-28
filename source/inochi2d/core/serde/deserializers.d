@@ -1,5 +1,5 @@
-module inochi2d.core.format.serde.deserializers;
-import inochi2d.core.format.serde;
+module inochi2d.core.serde.deserializers;
+import inochi2d.core.serde;
 import inochi2d.core.math;
 import inochi2d.core;
 import inmath.util;
@@ -14,7 +14,7 @@ interface IDeserializable {
     /**
         Custom deserializer function
     */
-    void onDeserialize(ref JSONValue object);
+    void onDeserialize(ref DataNode object) @nogc;
 }
 
 /**
@@ -22,8 +22,8 @@ interface IDeserializable {
 */
 enum isDeserializable(T) =
     is(T : IDeserializable) || 
-    is(typeof((ref JSONValue obj) { T a; a.onDeserialize(obj); })) || 
-    is(typeof((ref JSONValue obj) { T a; onDeserialize!T(a, obj); }));
+    is(typeof((ref DataNode obj) { T a; a.onDeserialize(obj); })) || 
+    is(typeof((ref DataNode obj) { T a; onDeserialize!T(a, obj); }));
 
 /**
     Deserializes a provided vector.
@@ -35,7 +35,7 @@ enum isDeserializable(T) =
     Returns:
         The deserialized vector
 */
-void onDeserialize(T)(ref T dst, ref JSONValue value)
+void onDeserialize(T)(ref T dst, ref DataNode value) @nogc
 if (isVector!T) {
     foreach(i, element; value.array) {
         if (i >= T.dimension) break;
@@ -46,7 +46,7 @@ if (isVector!T) {
 /**
     Array deserializer.
 */
-void onDeserialize(T)(ref T dst, ref JSONValue object) 
+void onDeserialize(T)(ref T dst, ref DataNode object) @nogc
 if (isArray!T) {
     import std.range : ElementType;
     alias ET = ElementType!T;
@@ -74,7 +74,7 @@ if (isArray!T) {
                 alias FT = ptrdiff_t;
 
             // Scalar optimisation
-            JSONValue[] arr = object.arrayNoRef;
+            DataNode[] arr = object.arrayNoRef;
             static if (isDynamicArray!T)
                 dst = new ET[arr.length];
             
@@ -87,13 +87,13 @@ if (isArray!T) {
             }
 
         } else {
-            JSONValue[] arr = object.arrayNoRef;
+            DataNode[] arr = object.arrayNoRef;
             if (arr.length > 0) {
 
                 static if (isDynamicArray!T)
                     dst.length = arr.length;
                 
-                foreach(i, ref JSONValue value; arr) {
+                foreach(i, ref DataNode value; arr) {
                     static if (isStaticArray!T)
                         if (i >= dst.length)
                             break;
@@ -110,48 +110,4 @@ if (isArray!T) {
             }
         }
     }
-}
-
-/**
-    Array deserializer.
-*/
-void onDeserialize(T)(ref T dst, ref JSONValue object) 
-if (is(T : U[string], U)) {
-    // import std.range : ElementType;
-    // alias ET = ElementType!T;
-
-    // if (object.isJsonObject) {
-    //     JSONValue[string] obj = object.objectNoRef;
-
-    //     foreach(key, ref JSONValue value; obj) {
-
-    //     }
-
-    //     if (arr.length > 0) {
-    //         dst.length = arr.length;
-            
-    //         foreach(i, ref JSONValue v; arr) {
-                
-    //             static if (is(ET : U[], U)) {
-    //                 v.deserialize(dst[i]);
-    //             } else static if (__traits(isIntegral, ET)) {
-    //                 switch(v.type) {
-    //                     case JSONType.uinteger:
-    //                         dst[i] = cast(ET)v.uinteger;
-    //                         break;
-    //                     case JSONType.integer:
-    //                         dst[i] = cast(ET)v.integer;
-    //                         break;
-    //                     case JSONType.float_:
-    //                         dst[i] = cast(ET)v.floating;
-    //                         break;
-    //                     default:
-    //                         break;
-    //                 }
-    //             } else static if (isDeserializable!ET) {
-    //                 dst[i].onDeserialize(v);
-    //             }
-    //         }
-    //     }
-    // }
 }

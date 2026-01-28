@@ -7,8 +7,11 @@
     Authors: Luna Nielsen
 */
 module inochi2d.core.registry;
-import nulib;
+import numem.core.lifetime;
+import numem.core.memory;
+import numem.core.traits;
 import numem;
+import nulib;
 
 /**
     A UDA applied to types in Inochi2D to allow them to be instantiated
@@ -33,8 +36,10 @@ struct TypeIdAbstract;
 mixin template Register(T, alias registry) {
     import numem.core.traits : hasUDA;
     static if (hasUDA!(T, TypeId)) {
+        pragma(msg, "Registering ", T.stringof, " in ", registry.stringof, "...");
+
         pragma(crt_constructor)
-        mixin("extern(C) void __in_register_", T.stringof, "() { registry.register!T(); }");
+        mixin("export extern(C) void __in_register_", T.stringof, "() { registry.register!T(); }");
     }
 }
 
@@ -45,7 +50,11 @@ mixin template Register(T, alias registry) {
 struct TypeRegistry(T) {
 private:
     alias __TypeMap(Key, Value) = MapImpl!(Key, Value, (a, b) => a < b, false, false);
-    alias __ctor(X) = () @nogc => assumeNoGC(() => cast(T)new X);
+    static X __construct(X)() @nogc {
+        return assumeNoGC(() {
+            return new(nu_mallocT!X()) X();
+        });
+    }
 
 @nogc:
     alias factory_t = T function();
@@ -69,8 +78,8 @@ public:
         typeIdStore[cast(void*)typeid(X)] = _tids[0];
 
         static if (!hasUDA!(X, TypeIdAbstract)) {
-            factoryStoreS[_tids[0].sid] = __ctor!X;
-            factoryStoreN[_tids[0].nid] = __ctor!X;
+            factoryStoreS[_tids[0].sid] = &__construct!X;
+            factoryStoreN[_tids[0].nid] = &__construct!X;
         }
     }
 

@@ -18,6 +18,8 @@ public import inochi2d.core.nodes.drivers.simplephysics;
 @TypeIdAbstract
 abstract class Driver : Node {
 protected:
+@nogc:
+    
     this() { }
 
     /**

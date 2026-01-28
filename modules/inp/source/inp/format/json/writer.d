@@ -56,6 +56,10 @@ void writeJsonImpl()(StreamWriter writer, auto ref DataNode node) {
         case DataNodeType.blob_:
             return;
         
+        case DataNodeType.boolean_:
+            writer.writeUTF8(node.tryCoerce!bool ? "true" : "false");
+            return;
+        
         case DataNodeType.int_:
             auto v = to_string(node.tryCoerce!int);
             writer.writeUTF8(v[]);

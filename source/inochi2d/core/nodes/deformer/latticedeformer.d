@@ -19,6 +19,7 @@ import numem;
 @TypeId("LatticeDeformer", 0x0202)
 class LatticeDeformer : Deformer {
 private:
+@nogc:
     int subdivs;
     vec2 size_;
 
@@ -53,18 +54,50 @@ private:
 
 protected:
 
+    /**
+        Serializes this node to a DataNode.
+
+        Params:
+            object =    The DataNode to serialize to.
+            recursive = Whether to recurse through children.
+    */
     override
-    void onSerialize(ref JSONValue object, bool recursive=true) {
+    void onSerialize(ref DataNode object, bool recursive=true) {
         super.onSerialize(object, recursive);
         object["subdivisions"] = subdivs.serialize();
     }
 
+    /**
+        Deserializes this node from a DataNode.
+
+        Params:
+            object = The DataNode to deserialize from.
+    */
     override
-    void onDeserialize(ref JSONValue object) {
+    void onDeserialize(ref DataNode object) {
         super.onDeserialize(object);
         object.tryGetRef(subdivs, "subdivisions");
         object.tryGetRef(size_, "size");
+    }
+
+    /**
+        Called when the node is to finalize its deserialization from disk.
+    */
+    override
+    void onFinalize() {
         this.regenLattice();
+    }
+
+    /**
+        Called during the update phase of a new frame.
+        
+        Params:
+            delta =     Time since the last frame.
+            drawList =  The drawlist for the active scene.
+    */
+    override
+    void onUpdate(float delta, DrawList drawList) {
+        super.onUpdate(delta, drawList);
     }
 
 public:
@@ -108,14 +141,6 @@ public:
     */
     this(Node parent = null) {
         super(parent);
-    }
-
-    /**
-        Updates the lattice deformer.
-    */
-    override
-    void update(float delta, DrawList drawList) {
-
     }
 
     /**

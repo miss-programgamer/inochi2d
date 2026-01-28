@@ -7,15 +7,14 @@
     - Hoshino Lina
 */
 module inochi2d.core.param;
-import inochi2d.core.format;
+import inochi2d.core.serde;
 import inochi2d.core.math;
 import inochi2d.core.guid;
+import inochi2d.core.sorting;
 import inochi2d.core;
-import std.exception;
-import std.array;
-import std.algorithm.mutation;
-import std.stdio;
+import nulib.collections;
 import nulib.string;
+import numem;
 
 public import inochi2d.core.param.binding;
 
@@ -24,27 +23,27 @@ enum ParamMergeMode {
     /**
         Parameters are merged additively
     */
-    additive,
+    additive        = 0x00,
 
     /**
         Parameters are merged with a weighted average
     */
-    weighted,
+    weighted        = 0x01,
 
     /**
         Parameters are merged multiplicatively
     */
-    multiplicative,
+    multiplicative  = 0x02,
 
     /**
         Forces parameter to be given value
     */
-    forced,
+    forced          = 0x03,
 
     /**
         Merge mode is passthrough
     */
-    passthrough,
+    passthrough     = 0x04,
 }
 
 /**
@@ -81,59 +80,10 @@ ParamMergeMode toMergeMode(string value) @nogc {
 /**
     A parameter
 */
-class Parameter : ISerializable, IDeserializable {
+class Parameter : NuRefCounted, ISerializable, IDeserializable {
 private:
-    struct Combinator {
-        vec2[] ivalues;
-        float[] iweights;
-        int isum;
+@nogc:
 
-        void clear() {
-            isum = 0;
-        }
-
-        void resize(int reqLength) {
-            ivalues.length = reqLength;
-            iweights.length = reqLength;
-        }
-
-        void add(vec2 value, float weight) {
-            if (isum >= ivalues.length) resize(isum+8);
-
-            ivalues[isum] = value;
-            iweights[isum] = weight;
-            isum++;
-        }
-
-        void add(int axis, float value, float weight) {
-            if (isum >= ivalues.length) resize(isum+8);
-
-            ivalues[isum] = vec2(axis == 0 ? value : 1, axis == 1 ? value : 1);
-            iweights[isum] = weight;
-            isum++;
-        }
-        
-        vec2 csum() {
-            vec2 val = vec2(0, 0);
-            foreach(i; 0..isum) {
-                val += ivalues[i];
-            }
-            return val;
-        }
-
-        vec2 avg() {
-            if (isum == 0) return vec2(1, 1);
-
-            vec2 val = vec2(0, 0);
-            foreach(i; 0..isum) {
-                val += ivalues[i]*iweights[i];
-            }
-            return val/isum;
-        }
-    }
-
-    Combinator iadd;
-    Combinator imul;
 public:
     /**
         Unique ID of parameter
@@ -144,13 +94,6 @@ public:
         Name of the parameter
     */
     nstring name;
-
-    /**
-        Optimized indexable name generated at runtime
-
-        DO NOT SERIALIZE THIS.
-    */
-    nstring indexableName;
 
     /**
         Whether this parameter updates the model
@@ -195,12 +138,12 @@ public:
     /**
         Position of the keypoints along each axis
     */
-    float[][2] axisPoints = [[0, 1], [0, 1]];
+    vector!float[2] axisPoints;
 
     /**
         Binding to targets
     */
-    ParameterBinding[] bindings;
+    vector!ParameterBinding bindings;
 
     /**
         The value normalized to the internal range (0.0->1.0)
@@ -213,33 +156,42 @@ public:
         );
     }
 
+    ~this() {
+        static foreach(axis; 0..axisPoints.length) {
+            axisPoints[axis].clear();
+        }
+    }
+
     /**
         For serialization
     */
-    this() { }
+    this() {
+        static foreach(axis; 0..axisPoints.length) {
+            this.axisPoints[axis].resize(2);
+            this.axisPoints[axis][0] = 0;
+            this.axisPoints[axis][1] = 1;
+        }
+    }
 
     /**
         Create new parameter
     */
     this(string name, bool isVec2) {
+        this();
         this.guid = inNewGUID();
         this.name = name;
         this.isVec2 = isVec2;
-        if (!isVec2)
-            axisPoints[1] = [0];
-        
-        this.makeIndexable();
     }
 
     /**
         Clone this parameter
     */
     Parameter dup() {
-        Parameter newParam = new Parameter(name ~ " (Copy)", isVec2);
+        Parameter newParam = nogc_new!Parameter(nstring(name, " (Copy)").take(), isVec2);
 
         newParam.min = min;
         newParam.max = max;
-        newParam.axisPoints = axisPoints.dup;
+        newParam.axisPoints = axisPoints.nu_dup;
 
         foreach(binding; bindings) {
             ParameterBinding newBinding = newParam.createBinding(
@@ -262,62 +214,68 @@ public:
     /**
         Serializes a parameter
     */
-    void onSerialize(ref JSONValue object, bool recursive = true) {
+    void onSerialize(ref DataNode object, bool recursive = true) {
         
         auto selfGuid = guid.toString();
-        object["guid"] = selfGuid.dup;
-        object["name"] = name;
+        object["guid"] = selfGuid[];
+        object["name"] = name[];
         object["is_vec2"] = isVec2;
         object["is_vec2"] = isVec2;
         object["min"] = min.serialize();
         object["max"] = max.serialize();
         object["defaults"] = defaults.serialize();
         object["axis_points"] = axisPoints.serialize();
-        object["merge_mode"] = mergeMode.serialize();
+        object["merge_mode"] = cast(uint)mergeMode;
 
-        object["bindings"] = JSONValue.emptyArray;
+        object["bindings"] = DataNode.createArray();
         foreach(ref binding; bindings) {
-            object["bindings"] ~= binding.serialize();
+            auto bindingNode = DataNode.createObject();
+            binding.onSerialize(bindingNode);
+
+            object["bindings"] ~= bindingNode;
         }
     }
 
     /**
         Deserializes a parameter
     */
-    void onDeserialize(ref JSONValue object) {
+    void onDeserialize(ref DataNode object) {
 
         this.guid = object.tryGetGUID("uuid", "guid");
         object.tryGetRef(name, "name");
         object.tryGetRef(isVec2, "is_vec2");
         object.tryGetRef(min, "min");
         object.tryGetRef(max, "max");
-        object.tryGetRef(axisPoints, "axis_points");
         object.tryGetRef(defaults, "defaults");
         mergeMode = object.tryGet!string("merge_mode").toMergeMode();
 
-        if (object.isJsonArray("bindings")) {
-            foreach(JSONValue child; object["bindings"].array) {
+        if ("axis_points" in object && object["axis_points"].array) {
+            foreach(i, ref axis; object["axis_points"].array) {
+                if (i > axisPoints.length)
+                    break;
+                
+                this.axisPoints[i].resize(axis.length);
+                axis.deserialize(axisPoints[i][0..axis.length]);
+            }
+        }
+
+        if ("bindings" in object && object["bindings"].isArray) {
+            foreach(DataNode child; object["bindings"].array) {
                 
                 // Skip empty children
                 if (string paramName = child.tryGet!string("param_name", null)) {
 
                     if (paramName == "deform") {
-                        auto binding = new DeformationParameterBinding(this);
+                        auto binding = nogc_new!DeformationParameterBinding(this);
                         child.deserialize(binding);
-                        bindings ~= binding;
+                        bindings ~= cast(ParameterBinding)binding;
                     } else {
-                        auto binding = new ValueParameterBinding(this);
+                        auto binding = nogc_new!ValueParameterBinding(this);
                         child.deserialize(binding);
-                        bindings ~= binding;
+                        bindings ~= cast(ParameterBinding)binding;
                     }
                 }
             }
-        }
-    }
-
-    void reconstruct(Puppet puppet) {
-        foreach(i, binding; bindings) {
-            binding.reconstruct(puppet);
         }
     }
 
@@ -325,18 +283,15 @@ public:
         Finalize loading of parameter
     */
     void finalize(Puppet puppet) {
-        this.makeIndexable();
         this.value = defaults;
-
-        ParameterBinding[] validBindingList;
-        foreach(i, binding; bindings) {
-            if (puppet.find!Node(binding.getNodeGUID())) {
-                binding.finalize(puppet);
-                validBindingList ~= binding;
+        foreach_reverse(i; 0..bindings.length) {
+            if (puppet.find!Node(bindings[i].getNodeGUID())) {
+                bindings[i].finalize(puppet);
+                continue;
             }
+
+            bindings.removeAt(i);
         }
-        
-        bindings = validBindingList;
     }
 
     void findOffset(vec2 offset, out vec2u index, out vec2 outOffset) {
@@ -363,65 +318,24 @@ public:
         if (!active)
             return;
 
-        lastInternal = (value + iadd.csum()) * imul.avg();
-
-        findOffset(this.mapValue(lastInternal), index, offset_);
+        findOffset(this.mapValue(value), index, offset_);
         foreach(binding; bindings) {
             binding.apply(index, offset_);
         }
-
-        // Reset combinatorics
-        iadd.clear();
-        imul.clear();
     }
 
     void pushIOffset(vec2 offset, ParamMergeMode mode = ParamMergeMode.passthrough, float weight=1) {
-        if (mode == ParamMergeMode.passthrough)
-            mode = mergeMode;
-        
-        switch(mode) with(ParamMergeMode) {
-            case forced:
-                this.value = offset;
-                break;
-            case additive:
-                iadd.add(offset, 1);
-                break;
-            case multiplicative:
-                imul.add(offset, 1);
-                break;
-            case weighted:
-                imul.add(offset, weight);
-                break;
-            default: break;
-        }
+        this.value = offset;
     }
 
     void pushIOffsetAxis(int axis, float offset, ParamMergeMode mode = ParamMergeMode.passthrough, float weight=1) {
-        if (mode == ParamMergeMode.passthrough)
-            mode = mergeMode;
-        
-        switch(mode) with(ParamMergeMode) {
-            case forced:
-                this.value.vector[axis] = offset;
-                break;
-            case additive:
-                iadd.add(axis, offset, 1);
-                break;
-            case multiplicative:
-                imul.add(axis, offset, 1);
-                break;
-            case weighted:
-                imul.add(axis, offset, weight);
-                break;
-            default: break;
-
-        }
+        this.value.vector[axis] = offset;
     }
 
     /**
         Get number of points for an axis
     */
-    uint axisPointCount(uint axis = 0) {
+    uint axisPointCount(uint axis = 0) @nogc {
         return cast(uint)axisPoints[axis].length;
     }
 
@@ -444,12 +358,7 @@ public:
         }
         
         if (oldidx != index) {
-            // BUG: Apparently deleting the oldindex and replacing it with newindex causes a crash.
-
-            // Insert it into the new position in the list
-            auto swap = axisPoints[oldidx];
-            axisPoints[axis] = axisPoints[axis].remove(oldidx);
-            axisPoints[axis].insertInPlace(index, swap);
+            nu_swap(axisPoints[axis][oldidx], axisPoints[axis][index]);
         }
 
         // Tell all bindings to reinterpolate
@@ -476,7 +385,7 @@ public:
         }
 
         // Insert it into the position list
-        axisPoints[axis].insertInPlace(index, off);
+        axisPoints[axis][index] = off;
 
         // Tell all bindings to insert space into their arrays
         foreach(binding; bindings) {
@@ -497,7 +406,7 @@ public:
         assert(index < (axisPoints[axis].length - 1), "cannot delete axis point at 1");
 
         // Remove the keypoint
-        axisPoints[axis] = axisPoints[axis].remove(index);
+        axisPoints[axis].removeAt(index);
 
         // Tell all bindings to remove it from their arrays
         foreach(binding; bindings) {
@@ -509,7 +418,7 @@ public:
         Flip the mapping across an axis
     */
     void reverseAxis(uint axis) {
-        axisPoints[axis].reverse();
+        in_reverse(axisPoints[axis]);
         foreach(ref i; axisPoints[axis]) {
             i = 1 - i;
         }
@@ -634,7 +543,7 @@ public:
     */
     ParameterBinding getBinding(Node n, string bindingName) {
         foreach(ref binding; bindings) {
-            if (binding.getNode() != n) continue;
+            if (binding.getNode() !is n) continue;
             if (binding.getName == bindingName) return binding;
         }
         return null;
@@ -645,7 +554,7 @@ public:
     */
     bool hasBinding(Node n, string bindingName) {
         foreach(ref binding; bindings) {
-            if (binding.getNode() != n) continue;
+            if (binding.getNode() !is n) continue;
             if (binding.getName == bindingName) return true;
         }
         return false;
@@ -656,7 +565,7 @@ public:
     */
     bool hasAnyBinding(Node n) {
         foreach(ref binding; bindings) {
-            if (binding.getNode() == n) return true;
+            if (binding.getNode() is n) return true;
         }
         return false;
     }
@@ -664,12 +573,12 @@ public:
     /**
         Create a new binding (without adding it) for a given node and name
     */
-    ParameterBinding createBinding(Node n, string bindingName, bool setZero = true) {
+    ParameterBinding createBinding(Node n, string bindingName, bool setZero = true) @nogc {
         ParameterBinding b;
         if (bindingName == "deform") {
-            b = new DeformationParameterBinding(this, n, bindingName);
+            b = nogc_new!DeformationParameterBinding(this, n, bindingName);
         } else {
-            b = new ValueParameterBinding(this, n, bindingName);
+            b = nogc_new!ValueParameterBinding(this, n, bindingName);
         }
 
         if (setZero) {
@@ -705,28 +614,18 @@ public:
         Remove an existing binding by ref
     */
     void removeBinding(ParameterBinding binding) {
-        import std.algorithm.searching : countUntil;
-        import std.algorithm.mutation : remove;
-        ptrdiff_t idx = bindings.countUntil(binding);
-        if (idx >= 0) {
-            bindings = bindings.remove(idx);
-        }
-    }
-
-    void makeIndexable() {
-        import std.uni : toLower;
-        indexableName = name.toLower;
+        bindings.remove(binding);
     }
 }
 
 private {
-    Parameter delegate(ref JSONValue) createFunc;
+    Parameter delegate(ref DataNode) createFunc;
 }
 
-Parameter inParameterCreate(JSONValue data) {
+Parameter inParameterCreate(DataNode data) {
     return createFunc(data);
 }
 
-void inParameterSetFactory(Parameter delegate(ref JSONValue) createFunc_) {
+void inParameterSetFactory(Parameter delegate(ref DataNode) createFunc_) {
     createFunc = createFunc_;
 }

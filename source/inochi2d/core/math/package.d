@@ -109,6 +109,7 @@ public:
 */
 struct Transform {
 private:
+@nogc:
     
     // NOTE:    This private var is declared here to allow instantiating
     //          the Transform like prior, but with the added benefit of
@@ -181,7 +182,7 @@ public:
     /**
         Updates the internal matrix of this transform
     */
-    void update() @nogc {
+    void update() {
         trs = 
             mat4.translation(this.translation) *
             quat.eulerRotation(this.rotation.x, this.rotation.y, this.rotation.z).toMatrix!(4, 4) *
@@ -191,24 +192,16 @@ public:
     /**
         Clears the vector
     */
-    void clear() @nogc {
+    void clear() {
         translation = vec3(0);
         rotation = vec3(0);
         scale = vec2(1, 1);
     }
 
     /**
-        Gets a string representation of the transform.
-    */
-    string toString() const {
-        import std.format : format;
-        return "%s, %s, %s".format(translation.toString, rotation.toString, scale.toString);
-    }
-
-    /**
         Serializes the transform.
     */
-    void onSerialize(ref JSONValue object) {
+    void onSerialize(ref DataNode object) {
         object["trans"] = translation.serialize();
         object["rot"] = rotation.serialize();
         object["scale"] = scale.serialize();
@@ -217,7 +210,7 @@ public:
     /**
         Deserializes a transform from JSON.
     */
-    void onDeserialize(ref JSONValue object) {
+    void onDeserialize(ref DataNode object) {
         object.tryGetRef(translation, "trans");
         object.tryGetRef(rotation, "rot");
         object.tryGetRef(scale, "scale");
@@ -315,11 +308,11 @@ alias vec4us = Vector!(ushort, 4); /// ditto
     Returns:
         The serialized vector
 */
-void onSerialize(T)(ref T value, ref JSONValue dst)
+void onSerialize(T)(ref T value, ref DataNode dst) @nogc
 if(isVector!T) {
-    dst = JSONValue.emptyArray;
+    dst = DataNode.createArray();
     static foreach(i; 0..T.dimension) {
-        dst.array ~= JSONValue(isFinite(value.vector[i]) ? value.vector[i] : 0);
+        dst.array ~= DataNode(isFinite(value.vector[i]) ? value.vector[i] : 0);
     }
 }
 
@@ -380,7 +373,7 @@ enum InterpolateMode : uint {
 /**
     Converts a string key into a interpolation mode.
 */
-InterpolateMode toInterpolateMode(string key) {
+InterpolateMode toInterpolateMode(string key) @nogc {
     switch(key) {
 
         case "nearest":

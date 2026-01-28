@@ -7,7 +7,6 @@
     Authors: Luna Nielsen
 */
 module inochi2d.core.nodes.composite;
-import inochi2d.core.nodes.drawable;
 import inochi2d.core.nodes.visual;
 import inochi2d.core.nodes;
 import inochi2d.core.math;
@@ -31,86 +30,8 @@ align(vec4.sizeof):
 @TypeId("Composite", 0x0301)
 class Composite : Visual {
 private:
-    DrawListAlloc* __screenSpaceAlloc;
-
-    void selfSort() {
-        import std.algorithm.sorting : sort;
-        import std.algorithm.mutation : SwapStrategy;
-        import std.math : cmp;
-        
-        sort!((a, b) => cmp(
-            a.zSort, 
-            b.zSort) > 0, SwapStrategy.stable)(toRender);
-    }
-
-    void scanPartsRecurse(Node node) {
-
-        // Don't need to scan null nodes
-        if (node is null) return;
-
-        // Do the main check
-        if (Drawable drawable = cast(Drawable)node) {
-            if (!drawable.renderEnabled)
-                return;
-            
-            toRender ~= drawable;
-            foreach(child; drawable.children) {
-                scanPartsRecurse(child);
-            }
-        } else if (Composite composite = cast(Composite)node) {
-            if (!composite.renderEnabled)
-                return;
-            
-            toRender ~= composite;
-        } else {
-
-            // Non-part nodes just need to be recursed through,
-            // they don't draw anything.
-            foreach(child; node.children) {
-                scanPartsRecurse(child);
-            }
-        }
-    }
-
-protected:
-    Node[] toRender;
-
-    override
-    void onSerialize(ref JSONValue object, bool recursive=true) {
-        super.onSerialize(object, recursive);
-        object["blend_mode"] = blendingMode;
-        object["tint"] = tint.serialize();
-        object["screenTint"] = screenTint.serialize();
-        object["opacity"] = opacity;
-        object["masks"] = masks.serialize();
-    }
-
-    override
-    void onDeserialize(ref JSONValue object) {
-        super.onDeserialize(object);
-
-        object.tryGetRef(opacity, "opacity");
-        object.tryGetRef(tint, "tint");
-        object.tryGetRef(screenTint, "screenTint");
-        object.tryGetRef(masks, "masks");
-        blendingMode = object.tryGet!string("blend_mode", "Normal").toBlendMode();
-    }
-
-    override
-    void finalize() {
-        super.finalize();
-        
-        MaskBinding[] validMasks;
-        foreach(i; 0..masks.length) {
-            if (Drawable nMask = puppet.find!Drawable(masks[i].maskSrcGUID)) {
-                masks[i].maskSrc = nMask;
-                validMasks ~= masks[i];
-            }
-        }
-
-        // Remove invalid masks
-        masks = validMasks;
-    }
+    DrawListAlloc* ssDrawList_;
+    Visual[] visible_;
 
     //
     //      PARAMETER OFFSETS
@@ -119,17 +40,106 @@ protected:
     vec3 offsetTint = vec3(0);
     vec3 offsetScreenTint = vec3(0);
 
-    // TODO: Cache this
-    size_t maskCount() {
-        size_t c;
-        foreach(m; masks) if (m.mode == MaskingMode.mask) c++;
-        return c;
+protected:
+
+    override
+    void onSerialize(ref DataNode object, bool recursive=true) @nogc {
+        super.onSerialize(object, recursive);
+        object["blend_mode"] = cast(uint)blendingMode;
+        object["tint"] = tint.serialize();
+        object["screenTint"] = screenTint.serialize();
+        object["opacity"] = opacity;
+        object["masks"] = masks.serialize();
     }
 
-    size_t dodgeCount() {
-        size_t c;
-        foreach(m; masks) if (m.mode == MaskingMode.dodge) c++;
-        return c;
+    override
+    void onDeserialize(ref DataNode object) @nogc {
+        super.onDeserialize(object);
+
+        object.tryGetRef(opacity, "opacity");
+        object.tryGetRef(tint, "tint");
+        object.tryGetRef(screenTint, "screenTint");
+        object.tryGetRef(masks, "masks");
+        
+        if ("blend_mode" in object && object["blend_mode"].isNumber)
+            blendingMode = cast(BlendMode)object.tryGet!uint("blend_mode", blendingMode.normal);
+        else
+            blendingMode = object.tryGet!string("blend_mode", "Normal").toBlendMode();
+    }
+
+    /**
+        Called during the early update phase of a new frame.
+        
+        Params:
+            drawList =  The drawlist for the active scene.
+    */
+    override
+    void onPreUpdate(DrawList drawList) {
+        super.onPreUpdate(drawList);
+        ssDrawList_ = null;
+
+        offsetOpacity = 1;
+        offsetTint = vec3(1, 1, 1);
+        offsetScreenTint = vec3(0, 0, 0);
+    }
+
+    /**
+        Called during the update phase of a new frame.
+        
+        Params:
+            delta =     Time since the last frame.
+            drawList =  The drawlist for the active scene.
+    */
+    override
+    void onUpdate(float delta, DrawList drawList) {
+        super.onUpdate(delta, drawList);
+
+        // Avoid over allocating a single screenspace
+        // rect.
+        if (!ssDrawList_)
+            ssDrawList_ = drawList.allocate(__screenSpaceMesh.vertices, __screenSpaceMesh.indices);
+    }
+
+    /**
+        Called when the node is to be redrawn.
+        
+        Params:
+            delta =     Time since the last frame.
+            drawList =  The drawlist for the active scene.
+            mode =      The masking mode to draw with.
+    */
+    override
+    void onDraw(float delta, DrawList drawList, MaskingMode mode) {
+        if (!renderEnabled || visible_.length == 0)
+            return;
+        
+        CompositeVars compositeVars = CompositeVars(
+            tint*offsetTint,
+            screenTint*offsetScreenTint,
+            opacity*offsetOpacity
+        );
+
+        visible_.sortNodes();
+
+        // Push sub render area.
+        drawList.beginComposite();
+            foreach(Node child; visible_) {
+                child.draw(delta, drawList);
+            }
+        drawList.endComposite();
+
+        if (masks.length > 0) {
+            foreach(ref mask; masks) {
+                mask.maskSrc.onDraw(delta, drawList, mask.mode);
+            }
+        }
+
+        // Then blit it to the main framebuffer
+        drawList.setVariables!CompositeVars(nid, compositeVars);
+        drawList.setMesh(ssDrawList_);
+        drawList.setDrawState(DrawState.compositeBlit);
+        drawList.setBlending(blendingMode);
+        drawList.next();
     }
 
 public:
@@ -266,93 +276,18 @@ public:
         }
     }
 
-    bool isMaskedBy(Drawable drawable) {
-        foreach(mask; masks) {
-            if (mask.maskSrc.guid == drawable.guid) return true;
-        }
-        return false;
-    }
-
-    ptrdiff_t getMaskIdx(Drawable drawable) {
-        if (drawable is null) return -1;
-        foreach(i, ref mask; masks) {
-            if (mask.maskSrc.guid == drawable.guid) return i;
-        }
-        return -1;
-    }
-
-    ptrdiff_t getMaskIdx(GUID guid) {
-        foreach(i, ref mask; masks) {
-            if (mask.maskSrc.guid == guid) return i;
-        }
-        return -1;
-    }
-
-    override
-    void preUpdate(DrawList drawList) {
-        super.preUpdate(drawList);
-        __screenSpaceAlloc = null;
-
-        offsetOpacity = 1;
-        offsetTint = vec3(1, 1, 1);
-        offsetScreenTint = vec3(0, 0, 0);
-    }
-
-    override
-    void update(float delta, DrawList drawList) {
-        super.update(delta, drawList);
-
-        // Avoid over allocating a single screenspace
-        // rect.
-        if (!__screenSpaceAlloc)
-            __screenSpaceAlloc = drawList.allocate(__screenSpaceMesh.vertices, __screenSpaceMesh.indices);
-    }
-
-    override
-    void draw(float delta, DrawList drawList) {
-        if (!renderEnabled || toRender.length == 0)
-            return;
-        
-        CompositeVars compositeVars = CompositeVars(
-            tint*offsetTint,
-            screenTint*offsetScreenTint,
-            opacity*offsetOpacity
-        );
-
-        this.selfSort();
-
-        // Push sub render area.
-        drawList.beginComposite();
-            foreach(Node child; toRender) {
-                child.draw(delta, drawList);
-            }
-        drawList.endComposite();
-
-        if (masks.length > 0) {
-            foreach(ref mask; masks) {
-                mask.maskSrc.drawAsMask(delta, drawList, mask.mode);
-            }
-        }
-
-        // Then blit it to the main framebuffer
-        drawList.setVariables!CompositeVars(nid, compositeVars);
-        drawList.setMesh(__screenSpaceAlloc);
-        drawList.setDrawState(DrawState.compositeBlit);
-        drawList.setBlending(blendingMode);
-        drawList.next();
-    }
-
     /**
         Scans for parts to render
     */
     void scanParts() {
-        toRender.length = 0;
-        foreach(child; children) {
-            scanPartsRecurse(child);
-        }
+        this.findVisuals(visible_);
     }
 }
 mixin Register!(Composite, in_node_registry);
+
+
+
+
 
 //
 //              IMPLEMENTATION DETAILS

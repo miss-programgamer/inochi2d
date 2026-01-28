@@ -8,17 +8,37 @@
 */
 module inochi2d.core.phys.system;
 import inochi2d;
-import std.math : isFinite;
 import inmath;
+import numem;
+import nulib;
+import nulib.math : isFinite;
 
 abstract
-class PhysicsSystem {
+class PhysicsSystem : NuObject {
 private:
-    size_t[float*] variableMap;
-    float*[] refs;
-    float[] derivative;
+@nogc:
+    map!(float*, size_t) variableMap;
+    vector!(float*) refs;
+
+    // Derivatives
+    float[] kstate;
+    float[] k0;
+    float[] k1;
+    float[] k2;
+    float[] k3;
+    float[] k4;
 
     float t;
+
+    /// Helper that resizes all of the temporary arrays.
+    void resize(size_t length) {
+        kstate  = kstate.nu_resize(length);
+        k0      = k0.nu_resize(length);
+        k1      = k1.nu_resize(length);
+        k2      = k2.nu_resize(length);
+        k3      = k3.nu_resize(length);
+        k4      = k4.nu_resize(length);
+    }
 
 protected:
     /**
@@ -30,6 +50,7 @@ protected:
         variableMap[var] = index;
         refs ~= var;
 
+        this.resize(refs.length);
         return index;
     }
 
@@ -46,14 +67,13 @@ protected:
         Set the derivative of a variable (solver input) by index
     */
     void setD(size_t index, float value) {
-        derivative[index] = value;
+        k0[index] = value;
     }
 
     /**
         Set the derivative of a float variable (solver input)
     */
     void setD(ref float var, float value) {
-        ulong index = variableMap[&var];
         setD(variableMap[&var], value);
     }
 
@@ -66,13 +86,9 @@ protected:
     }
 
     float[] getState() {
-        float[] vals;
-
-        foreach(idx, ptr; refs) {
-            vals ~= *ptr;
-        }
-
-        return vals;
+        foreach(idx, ptr; refs)
+            kstate[idx] = *ptr;
+        return kstate;
     }
 
     void setState(float[] vals) {
@@ -87,34 +103,44 @@ protected:
     abstract void eval(float t);
 
 public:
+
+    ~this() {
+        variableMap.clearContents();
+        refs.clear();
+
+        // Free derivatives.
+        nu_freea(kstate);
+        nu_freea(k0);
+        nu_freea(k1);
+        nu_freea(k2);
+        nu_freea(k3);
+        nu_freea(k4);
+    }
+
     /**
         Run a simulation tick (Runge-Kutta method)
     */
     void tick(float h) {
         float[] cur = getState();
-        float[] tmp;
-        tmp.length = cur.length;
-        derivative.length = cur.length;
-        foreach(i; 0..derivative.length)
-            derivative[i] = 0;
+        k0[0..$] = 0;
 
         eval(t);
-        float[] k1 = derivative.dup;
+        k1[0..$] = k0[0..$];
 
         foreach(i; 0..cur.length)
             *refs[i] = cur[i] + h * k1[i] / 2f;
         eval(t + h / 2f);
-        float[] k2 = derivative.dup;
+        k2[0..$] = k0[0..$];
 
         foreach(i; 0..cur.length)
             *refs[i] = cur[i] + h * k2[i] / 2f;
         eval(t + h / 2f);
-        float[] k3 = derivative.dup;
+        k3[0..$] = k0[0..$];
 
         foreach(i; 0..cur.length)
             *refs[i] = cur[i] + h * k3[i];
         eval(t + h);
-        float[] k4 = derivative.dup;
+        k4[0..$] = k0[0..$];
 
         foreach(i; 0..cur.length) {
             *refs[i] = cur[i] + h * (k1[i] + 2 * k2[i] + 2 * k3[i] + k4[i]) / 6f;
@@ -128,8 +154,6 @@ public:
 
         t += h;
     }
-
-public:
 
     /**
         Updates the anchor for the physics system

@@ -79,17 +79,21 @@ public:
 struct Deformation {
     vec2[] vertexOffsets;
 
-    this(vec2[] data) {
+    ~this() @trusted @nogc nothrow {
+        nu_freea(vertexOffsets);
+    }
+
+    this(vec2[] data) @trusted @nogc nothrow {
         this.update(data);
     }
 
-    void update(vec2[] points) {
-        vertexOffsets.length = points.length;
+    void update(vec2[] points) @trusted @nogc nothrow {
+        vertexOffsets = vertexOffsets.nu_resize(points.length);
         vertexOffsets[0..points.length] = points[0..$];
     }
 
-    void clear(size_t length) {
-        vertexOffsets.length = length;
+    void clear(size_t length) @trusted @nogc nothrow {
+        vertexOffsets = vertexOffsets.nu_resize(length);
         vertexOffsets[0..$] = vec2.zero;
     }
 
@@ -236,15 +240,16 @@ struct Deformation {
         }, this, other);
     }
 
-    void onSerialize(ref JSONValue data) {
+    void onSerialize(ref DataNode data) @nogc {
         foreach(offset; vertexOffsets) {
             data ~= offset.serialize();
         }
     }
 
-    void onDeserialize(ref JSONValue data) {
-        foreach(ref element; data.array) {
-            this.vertexOffsets ~= element.deserialize!vec2();
+    void onDeserialize(ref DataNode data) @nogc {
+        this.vertexOffsets = nu_malloca!vec2(data.length/2);
+        foreach(i, ref element; data.array) {
+            this.vertexOffsets[i/2] = element.deserialize!vec2();
         }
     }
 }

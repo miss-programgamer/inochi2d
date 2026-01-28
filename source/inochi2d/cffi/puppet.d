@@ -11,7 +11,7 @@ import inochi2d.cffi.render;
 import inochi2d.cffi.eh;
 import inochi2d.core.puppet;
 import inochi2d.core.render;
-import inochi2d.core.format;
+import inochi2d.core.serde;
 import inochi2d.core.param;
 import numem;
 import nulib.string;

@@ -6,11 +6,12 @@
     
     Authors: Luna Nielsen
 */
-module inochi2d.core.nodes.drawable.part;
-import inochi2d.core.nodes.drawable;
-import inochi2d.core.format;
+module inochi2d.core.nodes.part;
+import inochi2d.core.nodes.visual;
+import inochi2d.core.serde;
 import inochi2d.core.math;
 import inochi2d.core;
+import numem;
 
 import std.exception;
 import std.algorithm.mutation : copy;
@@ -45,6 +46,15 @@ private:
     DeformedMesh deformed_;
     DeformedMesh base_;
 
+    //
+    //      PARAMETER OFFSETS
+    //
+    float offsetMaskThreshold = 0;
+    float offsetOpacity = 1;
+    float offsetEmissionStrength = 1;
+    vec3 offsetTint = vec3(0);
+    vec3 offsetScreenTint = vec3(0);
+
 protected:
 
     /**
@@ -54,25 +64,29 @@ protected:
     DrawListAlloc* drawListSlot;
 
     /**
-        Allows serializing self data (with pretty serializer)
+        Serializes this node to a DataNode.
+
+        Params:
+            object =    The DataNode to serialize to.
+            recursive = Whether to recurse through children.
     */
     override
-    void onSerialize(ref JSONValue object, bool recursive = true) {
+    void onSerialize(ref DataNode object, bool recursive = true) {
         super.onSerialize(object, recursive);
 
-        MeshData data = mesh_.toMeshData();
+        MeshData data = MeshData(mesh_);
         object["mesh"] = data.serialize();
-        object["textures"] = JSONValue.emptyArray;
+        object["textures"] = DataNode.createArray();
         foreach(ref texture; textures) {
             if (texture) {
                 ptrdiff_t index = puppet.getTextureSlotIndexFor(texture);
-                object["textures"].array ~= JSONValue(index >= 0 ? index : NO_TEXTURE);
+                object["textures"].array ~= DataNode(index >= 0 ? index : NO_TEXTURE);
             } else {
-                object["textures"].array ~= JSONValue(NO_TEXTURE);
+                object["textures"].array ~= DataNode(NO_TEXTURE);
             }
         }
 
-        object["blend_mode"] = blendingMode;
+        object["blend_mode"] = cast(uint)blendingMode;
         object["tint"] = tint.serialize();
         object["screenTint"] = screenTint.serialize();
         object["emissionStrength"] = emissionStrength;
@@ -80,15 +94,21 @@ protected:
         object["opacity"] = opacity;
     }
 
+    /**
+        Deserializes this node from a DataNode.
+
+        Params:
+            object = The DataNode to deserialize from.
+    */
     override
-    void onDeserialize(ref JSONValue object) {
+    void onDeserialize(ref DataNode object) {
         super.onDeserialize(object);
 
         this.deformed_ = nogc_new!DeformedMesh();
         this.base_ = nogc_new!DeformedMesh();
         this.mesh = Mesh.fromMeshData(object.tryGet!MeshData("mesh"));
-        if (object.isJsonArray("textures")) {
-            foreach(i, ref JSONValue element; object["textures"].array) {
+        if ("textures" in object && object["textures"].isArray()) {
+            foreach(i, ref DataNode element; object["textures"].array) {
 
                 uint textureId = element.tryGet!uint(NO_TEXTURE);
                 if (textureId == NO_TEXTURE) continue;
@@ -105,19 +125,106 @@ protected:
         object.tryGetRef(screenTint, "screenTint");
         object.tryGetRef(tint, "tint");
         object.tryGetRef(emissionStrength, "emissionStrength");
-        object.tryGetRef(masks, "masks");
-
-        blendingMode = object.tryGet!string("blend_mode", "Normal").toBlendMode();
+        
+        if ("blend_mode" in object && object["blend_mode"].isNumber)
+            blendingMode = cast(BlendMode)object.tryGet!uint("blend_mode", blendingMode.normal);
+        else
+            blendingMode = object.tryGet!string("blend_mode", "Normal").toBlendMode();
     }
 
-    //
-    //      PARAMETER OFFSETS
-    //
-    float offsetMaskThreshold = 0;
-    float offsetOpacity = 1;
-    float offsetEmissionStrength = 1;
-    vec3 offsetTint = vec3(0);
-    vec3 offsetScreenTint = vec3(0);
+    /**
+        Called during the early update phase of a new frame.
+        
+        Params:
+            drawList =  The drawlist for the active scene.
+    */
+    override
+    void onPreUpdate(DrawList drawList) {
+        offsetMaskThreshold = 0;
+        offsetOpacity = 1;
+        offsetTint = vec3(1, 1, 1);
+        offsetScreenTint = vec3(0, 0, 0);
+        offsetEmissionStrength = 1;
+
+        super.preUpdate(drawList);
+        this.resetDeform();
+    }
+
+    /**
+        Called during the update phase of a new frame.
+        
+        Params:
+            delta =     Time since the last frame.
+            drawList =  The drawlist for the active scene.
+    */
+    override
+    void onUpdate(float delta, DrawList drawList) {
+        super.update(delta, drawList);
+        deformed_.pushMatrix(transform.matrix);
+    }
+
+    /**
+        Called during the late update phase of a new frame.
+        
+        Params:
+            drawList =  The drawlist for the active scene.
+    */
+    override
+    void onPostUpdate(DrawList drawList) {
+        super.postUpdate(drawList);
+        this.drawListSlot = drawList.allocate(deformed_.vertices, deformed_.indices);
+    }
+
+    /**
+        Called when the node is to be redrawn.
+        
+        Params:
+            delta =     Time since the last frame.
+            drawList =  The drawlist for the active scene.
+            mode =      The masking mode to draw with.
+    */
+    override
+    void onDraw(float delta, DrawList drawList, MaskingMode mode) {
+        if (mode >= MaskingMode.mask) {
+            drawList.setMesh(drawListSlot);
+            drawList.setDrawState(DrawState.defineMask);
+            drawList.setSources(textures);
+            drawList.setMasking(mode);
+            drawList.next();
+            return;
+        }
+
+        if (!renderEnabled)
+            return;
+
+        PartVars vars = PartVars(
+            tint*offsetTint,
+            screenTint*offsetScreenTint,
+            opacity*offsetOpacity,
+            emissionStrength*offsetEmissionStrength
+        );
+        
+        if (masks.length > 0) {
+            foreach(ref mask; masks) {
+                if (mask.maskSrc)
+                    mask.maskSrc.onDraw(delta, drawList, mask.mode);
+            }
+
+            drawList.setMesh(drawListSlot);
+            drawList.setDrawState(DrawState.maskedDraw);
+            drawList.setVariables!PartVars(nid, vars);
+            drawList.setBlending(blendingMode);
+            drawList.setSources(textures);
+            drawList.next();
+            return;
+        }
+
+        drawList.setMesh(drawListSlot);
+        drawList.setSources(textures);
+        drawList.setBlending(blendingMode);
+        drawList.setVariables!PartVars(nid, vars);
+        drawList.next();
+    }
 
 public:
 
@@ -163,11 +270,6 @@ public:
         TODO: use more than texture 0
     */
     Texture[IN_MAX_ATTACHMENTS] textures;
-
-    /**
-        List of masks to apply
-    */
-    MaskBinding[] masks;
 
     /**
         Blending mode
@@ -247,7 +349,7 @@ public:
         Constructs a new part
     */
     this(MeshData data, Texture[] textures, GUID guid, Node parent = null) {
-        super(data, guid, parent);
+        this(data, guid, parent);
         foreach(i; 0..TextureUsage.COUNT) {
             if (i >= textures.length) break;
             this.textures[i] = textures[i];
@@ -384,115 +486,16 @@ public:
         }
     }
 
-    bool isMaskedBy(Drawable drawable) {
-        foreach(mask; masks) {
-            if (mask.maskSrc.guid == drawable.guid) return true;
-        }
-        return false;
-    }
-
-    ptrdiff_t getMaskIdx(Drawable drawable) {
-        if (drawable is null) return -1;
-        foreach(i, ref mask; masks) {
-            if (mask.maskSrc.guid == drawable.guid) return i;
-        }
-        return -1;
-    }
-
-    ptrdiff_t getMaskIdx(GUID guid) {
-        foreach(i, ref mask; masks) {
-            if (mask.maskSrc.guid == guid) return i;
-        }
-        return -1;
-    }
-
-    override
-    void preUpdate(DrawList drawList) {
-        offsetMaskThreshold = 0;
-        offsetOpacity = 1;
-        offsetTint = vec3(1, 1, 1);
-        offsetScreenTint = vec3(0, 0, 0);
-        offsetEmissionStrength = 1;
-
-        super.preUpdate(drawList);
-        this.resetDeform();
-    }
-
     /**
-        Updates the drawable
+        Applies an offset to the Node's transform.
+
+        Params:
+            other = The transform to offset the current global transform by.
     */
     override
-    void update(float delta, DrawList drawList) {
-        super.update(delta, drawList);
-        deformed_.pushMatrix(transform.matrix);
-    }
-
-    /**
-        Post-update
-    */
-    override
-    void postUpdate(DrawList drawList) {
-        super.postUpdate(drawList);
-        this.drawListSlot = drawList.allocate(deformed_.vertices, deformed_.indices);
-    }
-
-    override
-    void draw(float delta, DrawList drawList) {
-        if (!renderEnabled)
-            return;
-
-        PartVars vars = PartVars(
-            tint*offsetTint,
-            screenTint*offsetScreenTint,
-            opacity*offsetOpacity,
-            emissionStrength*offsetEmissionStrength
-        );
-        
-        if (masks.length > 0) {
-            foreach(ref mask; masks) {
-                if (mask.maskSrc)
-                    mask.maskSrc.drawAsMask(delta, drawList, mask.mode);
-            }
-
-            drawList.setMesh(drawListSlot);
-            drawList.setDrawState(DrawState.maskedDraw);
-            drawList.setVariables!PartVars(nid, vars);
-            drawList.setBlending(blendingMode);
-            drawList.setSources(textures);
-            drawList.next();
-            return;
-        }
-
-        drawList.setMesh(drawListSlot);
-        drawList.setSources(textures);
-        drawList.setBlending(blendingMode);
-        drawList.setVariables!PartVars(nid, vars);
-        drawList.next();
-    }
-
-    override
-    void drawAsMask(float delta, DrawList drawList, MaskingMode mode) {
-        drawList.setMesh(drawListSlot);
-        drawList.setDrawState(DrawState.defineMask);
-        drawList.setSources(textures);
-        drawList.setMasking(mode);
-        drawList.next();
-    }
-
-    override
-    void finalize() {
-        super.finalize();
-        
-        MaskBinding[] validMasks;
-        foreach(i; 0..masks.length) {
-            if (Drawable nMask = puppet.find!Drawable(masks[i].maskSrcGUID)) {
-                masks[i].maskSrc = nMask;
-                validMasks ~= masks[i];
-            }
-        }
-
-        // Remove invalid masks
-        masks = validMasks;
+    void offsetTransform(Transform other) @nogc {
+        globalTransform = globalTransform.calcOffset(other);
+        globalTransform.update();
     }
 }
 mixin Register!(Part, in_node_registry);

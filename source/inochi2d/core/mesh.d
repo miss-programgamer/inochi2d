@@ -8,7 +8,7 @@
 */
 module inochi2d.core.mesh;
 import inochi2d.core.render.state;
-import inochi2d.core.format; // TODO: Replace
+import inochi2d.core.serde;
 import inochi2d.core.math.simd;
 import inochi2d.core.math.trig;
 import numem;
@@ -24,7 +24,6 @@ struct VtxData {
     vtx_t vtx;
     vec2 uv;
 }
-
 
 /**
     A collection of points connected to create a mesh.
@@ -334,6 +333,7 @@ public:
     Mesh data as stored in Inochi2D's file format.
 */
 struct MeshData {
+@nogc:
 
     /**
         Vertices in the mesh
@@ -350,15 +350,61 @@ struct MeshData {
     */
     uint[] indices;
 
+    /// Destructor
+    ~this() {
+        nu_freea(vertices);
+        nu_freea(uvs);
+        nu_freea(indices);
+    }
+
+    /**
+        Copy-constructor
+    */
+    this(ref return scope inout(typeof(this)) rhs) pure nothrow @trusted {
+        this.vertices = cast(typeof(vertices))rhs.vertices.nu_dup();
+        this.uvs = cast(typeof(uvs))rhs.vertices.nu_dup();
+        this.indices = cast(typeof(indices))rhs.vertices.nu_dup();
+    }
+
+    /**
+        Constructs a new MeshData from slices of mesh data.
+
+        Params:
+            vertices =  The vertices of the mesh.
+            uvs =       The UV coordinates of the mesh.
+            indices =   The indices of the mesh.
+    */
+    this(vec2[] vertices, vec2[] uvs, uint[] indices) {
+        this.vertices = vertices.nu_dup();
+        this.uvs = uvs.nu_dup();
+        this.indices = indices.nu_dup();
+    }
+
+    /**
+        Constructs a new MeshData from a refcounted mesh.
+
+        Params:
+            mesh =  The mesh to extract a MeshData from.
+    */
+    this(Mesh mesh) {
+        this.indices = mesh.indices.nu_dup;
+        this.vertices = nu_malloca!vec2(mesh.vertices.length);
+        this.uvs = nu_malloca!vec2(mesh.vertices.length);
+        foreach(i; 0..mesh.vertices.length) {
+            this.vertices[i] = mesh.vertices[i].vtx.xy;
+            this.uvs[i] = mesh.vertices[i].uv;
+        }
+    }
+
     /// Serialization handler
-    void onSerialize(ref JSONValue object) {
+    void onSerialize(ref DataNode object) {
         object["verts"] = vertices.serialize();
         object["uvs"] = uvs.serialize();
         object["indices"] = indices.serialize();
     }
 
     /// Deserialization handler
-    void onDeserialize(ref JSONValue object) {
+    void onDeserialize(ref DataNode object) {
         if (object.isNull) 
             return;
 
@@ -372,31 +418,7 @@ struct MeshData {
                 vertices[i] -= origin;
             }
         }
-
     }
-}
-
-/**
-    Converts a Mesh back into a MeshData.
-
-    Params:
-        mesh = The mesh to convert.
-    
-    Returns:
-        A GC allocated MeshData instance.
-*/
-MeshData toMeshData(Mesh mesh) {
-    MeshData data;
-    
-    // Indices match 1:1; so just copy them into the GC.
-    data.indices = mesh.indices.dup;
-    data.vertices.length = mesh.vertices.length;
-    data.uvs.length = mesh.vertices.length;
-    foreach(i; 0..mesh.vertices.length) {
-        data.vertices[i] = mesh.vertices[i].vtx.xy;
-        data.uvs[i] = mesh.vertices[i].uv;
-    }
-    return data;
 }
 
 /**

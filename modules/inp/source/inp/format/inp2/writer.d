@@ -57,6 +57,11 @@ void writeINP2Impl()(StreamWriter writer, auto ref DataNode node) {
             writer.writeLE!uint(INP2_TAG_NIL);
             return;
         
+        case DataNodeType.boolean_:
+            writer.writeLE!uint(INP2_TAG_BOOL);
+            writer.writeLE!uint(cast(uint)node.tryCoerce!bool);
+            return;
+        
         case DataNodeType.int_:
             writer.writeLE!uint(INP2_TAG_INT);
             writer.writeLE!int(node.tryCoerce!int);

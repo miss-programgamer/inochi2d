@@ -1,14 +1,16 @@
 module inochi2d.core.animation.animation;
-import inochi2d.core.format.serde;
+import inochi2d.core.serde;
 import inochi2d.core;
 import inmath;
 import inmath.interpolate;
+import numem;
 
 /**
     An animation
 */
 struct Animation {
 public:
+@nogc:
 
     /**
         The timestep of each frame
@@ -50,11 +52,6 @@ public:
     */
     int leadOut = -1;
 
-
-    void reconstruct(Puppet puppet) {
-        foreach(ref lane; lanes.dup) lane.reconstruct(puppet);
-    }
-
     /**
         Finalizes the animation
     */
@@ -65,7 +62,7 @@ public:
     /**
         Serialization function
     */
-    void onSerialize(ref JSONValue object, bool recursive = true) {
+    void onSerialize(ref DataNode object, bool recursive = true) @nogc {
         object["timestep"] = timestep;
         object["additive"] = additive;
         object["length"] = length;
@@ -73,7 +70,7 @@ public:
         object["leadOut"] = leadOut;
         object["animationWeight"] = animationWeight;
 
-        object["lanes"] = JSONValue.emptyArray;
+        object["lanes"] = DataNode.createArray();
         foreach(ref AnimationLane lane; lanes) {
             if (lane.paramRef.targetParam) {
                 object["lanes"] ~= lane.serialize();
@@ -84,7 +81,7 @@ public:
     /**
         Deserialization function
     */
-    void onDeserialize(ref JSONValue object) {
+    void onDeserialize(ref DataNode object) @nogc {
         object.tryGetRef(timestep, "timestep", timestep.init);
         object.tryGetRef(additive, "additive", additive.init);
         object.tryGetRef(animationWeight, "animationWeight", animationWeight.init);
@@ -114,6 +111,7 @@ struct AnimationParameterRef {
 */
 struct AnimationLane {
 private:
+@nogc:
     GUID refguid;
 
 public:
@@ -126,13 +124,13 @@ public:
     /**
         Serialization function
     */
-    void onSerialize(ref JSONValue object, bool recursive = true) {
-        object["interpolation"] = interpolation;
+    void onSerialize(ref DataNode object, bool recursive = true) @nogc {
+        object["interpolation"] = cast(uint)interpolation;
         object["keyframes"] = frames.serialize();
-        object["merge_mode"] = mergeMode;
+        object["merge_mode"] = cast(uint)mergeMode;
         if (paramRef) {
             auto targetGuid = paramRef.targetParam.guid.toString;
-            object["guid"] = targetGuid.dup;
+            object["guid"] = targetGuid[];
             object["target"] = paramRef.targetAxis;
         }
     }
@@ -140,8 +138,8 @@ public:
     /**
         Deserialization function
     */
-    void onDeserialize(ref JSONValue object) {
-        this.paramRef = new AnimationParameterRef(null, 0);
+    void onDeserialize(ref DataNode object) @nogc {
+        this.paramRef = nogc_new!AnimationParameterRef(null, 0);
         this.refguid = object.tryGetGUID("uuid", "guid");
 
         object.tryGetRef(interpolation, "interpolation");
@@ -236,8 +234,6 @@ public:
         // if there's nothing to do.
         return 0;
     }
-
-    void reconstruct(Puppet puppet) { }
     
     void finalize(Puppet puppet) {
         if (paramRef) paramRef.targetParam = puppet.findParameter(refguid);
@@ -247,9 +243,8 @@ public:
         Updates the order of the keyframes
     */
     void updateFrames() {
-        import std.algorithm.sorting : sort;
-        import std.algorithm.mutation : SwapStrategy;
-        sort!((a, b) => a.frame < b.frame, SwapStrategy.stable)(frames);
+        import inochi2d.core.sorting : in_sort;
+        in_sort!((a, b) => a.frame < b.frame)(frames);
     }
 }
 
@@ -275,7 +270,7 @@ struct Keyframe {
     /**
         Serialization function
     */
-    void onSerialize(ref JSONValue object, bool recursive = true) {
+    void onSerialize(ref DataNode object, bool recursive = true) @nogc {
         object["frame"] = frame;
         object["value"] = value;
         object["tension"] = tension;
@@ -284,7 +279,7 @@ struct Keyframe {
     /**
         Deserialization function
     */
-    void onDeserialize(ref JSONValue object) {
+    void onDeserialize(ref DataNode object) @nogc {
         object.tryGetRef(frame, "frame");
         object.tryGetRef(value, "value");
         object.tryGetRef(tension, "tension");

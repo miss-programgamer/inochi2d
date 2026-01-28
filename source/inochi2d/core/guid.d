@@ -7,9 +7,9 @@
     Authors: Luna Nielsen, seagetch
 */
 module inochi2d.core.guid;
+import inochi2d.core.serde;
 import nulib.random;
 import nulib.uuid;
-import std.json;
 
 /**
     A globally unique ID.
@@ -59,9 +59,8 @@ GUID inNewGUID() @nogc {
     Returns:
         A GUID.
 */
-GUID tryGetGUID(ref JSONValue obj, string uuidKey, string guidKey = "guid") {
-    import inochi2d.core.format.serde : hasKey, tryGet, isScalar;
-    if (obj.hasKey(uuidKey) && obj[uuidKey].isScalar)
+GUID tryGetGUID(ref DataNode obj, string uuidKey, string guidKey = "guid") @nogc {
+    if (uuidKey in obj && obj[uuidKey].isNumber)
         return obj.tryGet!uint(uuidKey).toGuid;
     else {
         return GUID(obj.tryGet!string(guidKey));
@@ -74,11 +73,10 @@ GUID tryGetGUID(ref JSONValue obj, string uuidKey, string guidKey = "guid") {
     Params:
         obj =       The object to get the GUID from.
 */
-GUID tryGetGUID(ref JSONValue obj) {
-    import inochi2d.core.format.serde : tryGet, isScalar;
-    return obj.isScalar ?
+GUID tryGetGUID(ref DataNode obj) @nogc {
+    return obj.isNumber ?
         obj.tryGet!uint(uint.max).toGuid :
-        GUID(obj.str);
+        GUID(obj.text);
 }
 
 //

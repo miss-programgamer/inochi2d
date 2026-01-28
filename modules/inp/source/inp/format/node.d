@@ -17,15 +17,38 @@ import numem;
 
 enum DataNodeType : uint {
     undefined   = 0,
-    string_     = 1,
+    boolean_    = 1,
     int_        = 2,
     uint_       = 3,
     float_      = 4,
-    array_      = 5,
-    object_     = 6,
-    blob_       = 7,
+    string_     = 5,
+    array_      = 6,
+    object_     = 7,
+    blob_       = 8,
 }
 
+/**
+    The compile-time $(D DataNodeType) corrosponding to type $(D T).
+*/
+template dataNodeTypeOf(T) {
+    static if (is(T == bool)) {
+        enum dataNodeTypeOf = DataNodeType.boolean_;
+    } else static if (__traits(isIntegral, T)) {
+        enum dataNodeTypeOf = __traits(isUnsigned, T) ? DataNodeType.uint_ : DataNodeType.int_;
+    } else static if (__traits(isFloating, T)) {
+        enum dataNodeTypeOf = DataNodeType.float_;
+    } else static if (is(T == ubyte[])) {
+        enum dataNodeTypeOf = DataNodeType.blob_;
+    } else static if (is(T : string)) {
+        enum dataNodeTypeOf = DataNodeType.string_;
+    } else static if (is(T == U[], U)) {
+        enum dataNodeTypeOf = DataNodeType.array_;
+    } else static if (is(T == class) || is(T == struct)) {
+        enum dataNodeTypeOf = DataNodeType.object_;
+    } else {
+        enum dataNodeTypeOf = DataNodeType.undefined;
+    }
+}
 
 /**
     A node containing data for (de)serialization.
@@ -41,10 +64,11 @@ private:
     @nogc:
 
         void* undefined;
-        string string_;
+        bool boolean_;
         long int_; 
         ulong uint_; 
         float float_; 
+        string string_;
         RcArray!DataNode array_; 
         RcOrderedDictionary!(string, DataNode) object_;
         ubyte[] blob_;
@@ -52,6 +76,10 @@ private:
 
     DataNodeType dataType = DataNodeType.undefined;
     DataNodeStore dataStore;
+
+    template isSameType(T) {
+        enum isSameType(U) = is(T == U);
+    }
 public:
 
     /**
@@ -70,6 +98,21 @@ public:
     @property bool isNumber() nothrow pure => dataType >= DataNodeType.int_ && dataType <= DataNodeType.float_;
 
     /**
+        Whether the DataNode is an object.
+    */
+    @property bool isObject() nothrow pure => dataType == DataNodeType.object_;
+
+    /**
+        Whether the DataNode is an array.
+    */
+    @property bool isArray() nothrow pure => dataType == DataNodeType.array_;
+
+    /**
+        Whether the DataNode is a byte blob.
+    */
+    @property bool isBlob() nothrow pure => dataType == DataNodeType.blob_;
+
+    /**
         The text content of the node, or null.
     */
     @property string text() nothrow pure => isType(DataNodeType.string_) ? dataStore.string_[] : null;
@@ -80,7 +123,12 @@ public:
     @property ubyte[] blob() nothrow pure => isType(DataNodeType.blob_) ? dataStore.blob_[] : null;
 
     /**
-        The text content of the node, or null.
+        The boolean content of the datanode, or false.
+    */
+    @property bool boolean() nothrow pure => tryCoerce!bool(false);
+
+    /**
+        The number content of the data node, or NaN
     */
     @property float number() nothrow pure => tryCoerce!float(float.nan);
 
@@ -143,35 +191,41 @@ public:
         v.dataStore.array_ = RcArray!(DataNode).make();
         return v;
     }
-
+    
     /**
-        Constructs an integer data node.
+        Constructs a boolean data node.
     */
-    static foreach(T; AliasSeq!(byte, short, int, long)) {
-        this()(auto ref T value) @safe nothrow {
-            this.dataType = DataNodeType.int_;
-            this.dataStore = DataNodeStore(int_: cast(long)value);
-        }
+    this(T)(auto ref T value) @safe nothrow 
+    if (is(T == bool)) {
+        this.dataType = DataNodeType.boolean_;
+        this.dataStore = DataNodeStore(boolean_: cast(bool)value);
     }
-
+    
+    /**
+        Constructs a signed integer data node.
+    */
+    this(T)(auto ref T value) @safe nothrow 
+    if (anySatisfy!(isSameType!T, AliasSeq!(byte, short, int, long))) {
+        this.dataType = DataNodeType.int_;
+        this.dataStore = DataNodeStore(int_: cast(long)value);
+    }
+    
     /**
         Constructs an unsigned integer data node.
     */
-    static foreach(T; AliasSeq!(ubyte, ushort, uint, ulong)) {
-        this()(auto ref T value) @safe nothrow {
-            this.dataType = DataNodeType.uint_;
-            this.dataStore = DataNodeStore(uint_: cast(ulong)value);
-        }
+    this(T)(auto ref T value) @safe nothrow 
+    if (anySatisfy!(isSameType!T, AliasSeq!(ubyte, ushort, uint, ulong))) {
+        this.dataType = DataNodeType.uint_;
+        this.dataStore = DataNodeStore(uint_: cast(ulong)value);
     }
 
     /**
         Constructs a floating point data node.
     */
-    static foreach(T; AliasSeq!(float, double)) {
-        this()(auto ref T value) @safe nothrow {
-            this.dataType = DataNodeType.float_;
-            this.dataStore = DataNodeStore(float_: cast(double)value);
-        }
+    this(T)(auto ref T value) @safe nothrow 
+    if (anySatisfy!(isSameType!T, AliasSeq!(float, double))) {
+        this.dataType = DataNodeType.float_;
+        this.dataStore = DataNodeStore(float_: cast(double)value);
     }
 
     /**
@@ -397,6 +451,9 @@ public:
             
             case DataNodeType.string_:
                 return dataStore.string_;
+            
+            case DataNodeType.boolean_:
+                return dataStore.boolean_ ? "true" : "false";
             
             case DataNodeType.int_:
                 return to_string(dataStore.int_);

@@ -7,17 +7,18 @@
     - Hoshino Lina
 */
 module inochi2d.core.param.binding;
-import inochi2d.core.format;
+import inochi2d.core.serde;
 import inochi2d.core.math;
+import inochi2d.core.sorting;
 import inochi2d.core;
-import std.algorithm.mutation;
-import std.exception;
-import std.array;
+import nulib.collections;
+import numem;
 
 /**
     A target to bind to
 */
 struct BindTarget {
+    
     /**
         The node to bind to
     */
@@ -32,12 +33,9 @@ struct BindTarget {
 /**
     A binding to a parameter, of a given value type
 */
-abstract class ParameterBinding : ISerializable, IDeserializable {
-
-    /**
-        Restructure object before finalization
-    */
-    abstract void reconstruct(Puppet puppet);
+abstract
+class ParameterBinding : NuRefCounted, ISerializable, IDeserializable {
+@nogc:
 
     /**
         Finalize loading of parameter
@@ -167,12 +165,12 @@ abstract class ParameterBinding : ISerializable, IDeserializable {
     /**
         Serialize
     */
-    abstract void onSerialize(ref JSONValue data, bool recursive = true);
+    abstract void onSerialize(ref DataNode data, bool recursive = true);
 
     /**
         Deserialize
     */
-    abstract void onDeserialize(ref JSONValue data);
+    abstract void onDeserialize(ref DataNode data);
 }
 
 /**
@@ -180,14 +178,27 @@ abstract class ParameterBinding : ISerializable, IDeserializable {
 */
 abstract class ParameterBindingImpl(T) : ParameterBinding {
 private:
-    /**
-        Node reference (for deserialization)
-    */
+@nogc:
     GUID nodeRef;
-
     InterpolateMode interpolateMode_ = InterpolateMode.linear;
 
+    // Helper that allocates a 2D array.
+    static T[][] malloca_2d(T)(size_t width, size_t height) {
+        T[][] result = nu_malloca!(T[])(height);
+        foreach(ref vy; result)
+            vy = nu_malloca!T(width);
+        return result;
+    }
+
+    // Helper that frees a 2D array.
+    static void free_2d(T)(ref T[][] arr) {
+        foreach(x; 0..arr.length)
+            nu_freea(arr[x]);
+        nu_freea(arr);
+    }
+    
 public:
+
     /**
         Parent Parameter owning this binding
     */
@@ -265,6 +276,11 @@ public:
         return count;
     }
 
+    ~this() {
+        free_2d(values);
+        free_2d(isSet_);
+    }
+
     this(Parameter parameter) {
         this.parameter = parameter;
     }
@@ -273,46 +289,49 @@ public:
         this.parameter = parameter;
         this.target.node = targetNode;
         this.target.paramName = paramName;
-
-        clear();
     }
 
     /**
         Serializes a binding
     */
     override
-    void onSerialize(ref JSONValue object, bool recursive = true) {
+    void onSerialize(ref DataNode object, bool recursive = true) {
         auto nodeGuid = target.node.guid.toString();
-        object["node"] = nodeGuid.dup;
+        object["node"] = nodeGuid[];
         object["param_name"] = target.paramName;
         object["values"] = values.serialize();
         object["isSet"] = isSet_.serialize();
-        object["interpolate_mode"] = interpolateMode_;
+        object["interpolate_mode"] = cast(uint)interpolateMode_;
     }
 
     /**
         Deserializes a binding
     */
     override
-    void onDeserialize(ref JSONValue object) {
+    void onDeserialize(ref DataNode object) {
         this.nodeRef = object.tryGetGUID("node", "target");
         object.tryGetRef(target.paramName, "param_name");
         object.tryGetRef(values, "values");
         object.tryGetRef(isSet_, "isSet");
 
-        interpolateMode_ = object.tryGet!string("interpolate_mode").toInterpolateMode();
+        if ("interpolate_mode" in object && object["interpolate_mode"].isNumber)
+            interpolateMode_ = cast(InterpolateMode)object.tryGet!uint("interpolate_mode");
+        else
+            interpolateMode_ = object.tryGet!string("interpolate_mode").toInterpolateMode();
 
         uint xCount = parameter.axisPointCount(0);
         uint yCount = parameter.axisPointCount(1);
 
-        enforce(this.values.length == xCount, "Mismatched X value count");
-        foreach (i; this.values) {
-            enforce(i.length == yCount, "Mismatched Y value count");
-        }
+        debug {
+            assert(this.values.length == xCount, "Mismatched X value count");
+            foreach (i; this.values) {
+                assert(i.length == yCount, "Mismatched Y value count");
+            }
 
-        enforce(this.isSet_.length == xCount, "Mismatched X isSet_ count");
-        foreach (i; this.isSet_) {
-            enforce(i.length == yCount, "Mismatched Y isSet_ count");
+            assert(this.isSet_.length == xCount, "Mismatched X isSet_ count");
+            foreach (i; this.isSet_) {
+                assert(i.length == yCount, "Mismatched Y isSet_ count");
+            }
         }
     }
 
@@ -324,10 +343,6 @@ public:
         this.target.node = puppet.find(nodeRef);
     }
 
-    override
-    void reconstruct(Puppet puppet) {
-    }
-
     /**
         Clear all keypoint data
     */
@@ -336,13 +351,14 @@ public:
         uint xCount = parameter.axisPointCount(0);
         uint yCount = parameter.axisPointCount(1);
 
-        values.length = xCount;
-        isSet_.length = xCount;
-        foreach (x; 0 .. xCount) {
-            isSet_[x].length = 0;
-            isSet_[x].length = yCount;
+        values = values.nu_resize(xCount);
+        isSet_ = isSet_.nu_resize(xCount);
 
-            values[x].length = yCount;
+        foreach (x; 0 .. xCount) {
+            isSet_[x] = isSet_[x].nu_resize(yCount);
+            isSet_[x][0..$] = false;
+
+            values[x] = values[x].nu_resize(yCount);
             foreach (y; 0 .. yCount) {
                 clearValue(values[x][y]);
             }
@@ -415,13 +431,13 @@ public:
     */
     override void reverseAxis(uint axis) {
         if (axis == 0) {
-            values.reverse();
-            isSet_.reverse();
+            in_reverse(values);
+            in_reverse(isSet_);
         } else {
             foreach (ref i; values)
-                i.reverse();
+                in_reverse(i);
             foreach (ref i; isSet_)
-                i.reverse();
+                in_reverse(i);
         }
     }
 
@@ -434,13 +450,13 @@ public:
         uint yCount = parameter.axisPointCount(1);
 
         // Currently valid points
-        bool[][] valid;
+        bool[][] valid = malloca_2d!bool(xCount, yCount);
         uint validCount = 0;
         uint totalCount = xCount * yCount;
 
         // Initialize validity map to user-set points
         foreach (x; 0 .. xCount) {
-            valid ~= isSet_[x].dup;
+            valid[x][0..yCount] = isSet_[x][0..yCount];
             foreach (y; 0 .. yCount) {
                 if (isSet_[x][y])
                     validCount++;
@@ -449,23 +465,19 @@ public:
 
         // If there are zero valid points, just clear ourselves
         if (validCount == 0) {
+            free_2d(valid);
             clear();
             return;
         }
 
         // Whether any given point was just set
-        bool[][] newlySet;
-        newlySet.length = xCount;
+        bool[][] newlySet = malloca_2d!bool(xCount, yCount);
 
         // List of indices to commit
-        vec2u[] commitPoints;
+        vector!vec2u commitPoints;
 
         // Used by extendAndIntersect for x/y factor
-        float[][] interpDistance;
-        interpDistance.length = xCount;
-        foreach (x; 0 .. xCount) {
-            interpDistance[x].length = yCount;
-        }
+        float[][] interpDistance = malloca_2d!float(xCount, yCount);
 
         // Current interpolation axis
         bool yMajor = false;
@@ -595,16 +607,19 @@ public:
 
                         // If we're running the second stage of intersecting 1D interpolation
                         if (secondPass && isNewlySet(i, m)) {
+
                             // Found an intersection, do not commit the previous points
                             if (!detectedIntersections) {
-                                //debug writefln("Intersection at %d, %d", i, m);
-                                commitPoints.length = 0;
+                                commitPoints.clear();
                             }
+
                             // Average out the point at the intersection
                             set(i, m, (val + get(i, m)) * 0.5f);
+
                             // From now on we're only computing intersection points
                             detectedIntersections = true;
                         }
+
                         // If we've found no intersections so far, continue with normal
                         // 1D interpolation.
                         if (!detectedIntersections)
@@ -653,7 +668,7 @@ public:
                 if (secondPass && isNewlySet(maj, min)) {
                     // Found an intersection, do not commit the previous points
                     if (!detectedIntersections) {
-                        commitPoints.length = 0;
+                        commitPoints.clear();
                     }
                     float majDist = getDistance(maj, min);
                     float frac = minDist / (minDist + majDist * majDist / minDist);
@@ -705,7 +720,7 @@ public:
                 valid[i.x][i.y] = true;
                 validCount++;
             }
-            commitPoints.length = 0;
+            commitPoints.clear();
 
             // Are we done?
             if (validCount == totalCount)
@@ -713,8 +728,7 @@ public:
 
             // Reset the newlySet array
             foreach (x; 0 .. xCount) {
-                newlySet[x].length = 0;
-                newlySet[x].length = yCount;
+                newlySet[x][0..$] = bool.init;
             }
 
             // Try 1D interpolation in the X-Major direction
@@ -748,8 +762,9 @@ public:
             break;
         }
 
-        // The above algorithm should be guaranteed to succeed in all cases.
-        enforce(validCount == totalCount, "Interpolation failed to complete");
+        free_2d(valid);
+        free_2d(newlySet);
+        free_2d(interpDistance);
     }
 
     T interpolate(vec2u leftKeypoint, vec2 offset) {
@@ -844,16 +859,31 @@ public:
         if (axis == 0) {
             uint yCount = parameter.axisPointCount(1);
 
-            values.insertInPlace(index, cast(T[])[]);
-            values[index].length = yCount;
-            isSet_.insertInPlace(index, cast(bool[])[]);
-            isSet_[index].length = yCount;
+            // Extend arrays.
+            values = values.nu_resize(values.length+1);
+            isSet_ = isSet_.nu_resize(isSet_.length+1);
+
+            // Shift arrays.
+            nu_memmove(values.ptr+index+1, values.ptr+index, values.length-index);
+            nu_memmove(isSet_.ptr+index+1, isSet_.ptr+index, isSet_.length-index);
+
+            // Allocate sub-arrays.
+            values[index] = nu_malloca!T(yCount);
+            isSet_[index] = nu_malloca!bool(yCount);
         } else if (axis == 1) {
-            foreach (ref i; this.values) {
-                i.insertInPlace(index, T.init);
-            }
-            foreach (ref i; this.isSet_) {
-                i.insertInPlace(index, false);
+            uint xCount = parameter.axisPointCount(0);
+            foreach(x; 0..xCount) {
+
+                // Extend arrays.
+                values[x] = values[x].nu_resize(values[x].length+1);
+                isSet_[x] = isSet_[x].nu_resize(isSet_[x].length+1);
+
+                // Shift arrays.
+                nu_memmove(values[x].ptr+index+1, values[x].ptr+index, values[x].length-index);
+                nu_memmove(isSet_[x].ptr+index+1, isSet_[x].ptr+index, isSet_[x].length-index);
+
+                values[x][index] = T.init;
+                isSet_[x][index] = false;
             }
         }
 
@@ -865,31 +895,14 @@ public:
         assert(axis == 0 || axis == 1);
 
         if (axis == 0) {
-            {
-                auto swap = values[oldindex];
-                values = values.remove(oldindex);
-                values.insertInPlace(newindex, swap);
-            }
+            nu_swap(values[oldindex], values[newindex]);
+            nu_swap(isSet_[oldindex], isSet_[newindex]);
 
-            {
-                auto swap = isSet_[oldindex];
-                isSet_ = isSet_.remove(oldindex);
-                isSet_.insertInPlace(newindex, swap);
-            }
         } else if (axis == 1) {
-            foreach (ref i; this.values) {
-                {
-                    auto swap = i[oldindex];
-                    i = i.remove(oldindex);
-                    i.insertInPlace(newindex, swap);
-                }
-            }
-            foreach (i; this.isSet_) {
-                {
-                    auto swap = i[oldindex];
-                    i = i.remove(oldindex);
-                    i.insertInPlace(newindex, swap);
-                }
+            uint xCount = parameter.axisPointCount(0);
+            foreach(x; 0..xCount) {
+                nu_swap(values[x][oldindex], values[x][newindex]);
+                nu_swap(isSet_[x][oldindex], isSet_[x][newindex]);
             }
         }
 
@@ -901,14 +914,25 @@ public:
         assert(axis == 0 || axis == 1);
 
         if (axis == 0) {
-            values = values.remove(index);
-            isSet_ = isSet_.remove(index);
+
+            // Shift arrays.
+            nu_memmove(values.ptr+index, values.ptr+index+1, values.length-index);
+            nu_memmove(isSet_.ptr+index, isSet_.ptr+index+1, isSet_.length-index);
+            
+            // Shrink arrays.
+            values = values.nu_resize(values.length-1);
+            isSet_ = isSet_.nu_resize(isSet_.length-1);
         } else if (axis == 1) {
-            foreach (i; 0 .. this.values.length) {
-                values[i] = values[i].remove(index);
-            }
-            foreach (i; 0 .. this.isSet_.length) {
-                isSet_[i] = isSet_[i].remove(index);
+            uint xCount = parameter.axisPointCount(0);
+            foreach(x; 0..xCount) {
+
+                // Shift arrays.
+                nu_memmove(values[x].ptr+index, values[x].ptr+index+1, values[x].length-index);
+                nu_memmove(isSet_[x].ptr+index, isSet_[x].ptr+index+1, isSet_[x].length-index);
+                
+                // Shrink arrays.
+                values[x] = values[x].nu_resize(values[x].length-1);
+                isSet_[x] = isSet_[x].nu_resize(isSet_[x].length-1);
             }
         }
 
@@ -998,6 +1022,9 @@ public:
 }
 
 class ValueParameterBinding : ParameterBindingImpl!float {
+public:
+@nogc:
+
     this(Parameter parameter) {
         super(parameter);
     }
@@ -1027,6 +1054,8 @@ class ValueParameterBinding : ParameterBindingImpl!float {
 }
 
 class DeformationParameterBinding : ParameterBindingImpl!Deformation {
+public:
+@nogc:
     this(Parameter parameter) {
         super(parameter);
     }
@@ -1035,15 +1064,15 @@ class DeformationParameterBinding : ParameterBindingImpl!Deformation {
         super(parameter, targetNode, paramName);
     }
 
-    void update(vec2u point, vec2[] offsets) {
+    void update(vec2u point, vec2[] offsets) @nogc {
         this.isSet_[point.x][point.y] = true;
-        this.values[point.x][point.y].update(offsets.dup);
+        this.values[point.x][point.y].update(offsets);
         this.reInterpolate();
     }
 
     override
     void applyToTarget(Deformation value) {
-        enforce(this.target.paramName == "deform");
+        assert(this.target.paramName == "deform");
 
         if (IDeformable df = cast(IDeformable) target.node) {
             df.deform(value.vertexOffsets, false);
@@ -1104,7 +1133,8 @@ unittest {
 
     void runTest(float[][] input, float[][] expect, float[][2] axisPoints, string description) {
         Parameter param = new Parameter();
-        param.axisPoints = axisPoints;
+        param.axisPoints[0] ~= axisPoints[0];
+        param.axisPoints[1] ~= axisPoints[1];
 
         ValueParameterBinding bind = new ValueParameterBinding(param);
 
@@ -1112,8 +1142,8 @@ unittest {
         bind.values = input;
         bind.isSet_.length = input.length;
         foreach (x; 0 .. input.length) {
-            bind.isSet_[x].length = input[0].length;
-            foreach (y; 0 .. input[0].length) {
+            bind.isSet_[x].length = input[x].length;
+            foreach (y; 0 .. input[x].length) {
                 bind.isSet_[x][y] = isFinite(input[x][y]);
             }
         }

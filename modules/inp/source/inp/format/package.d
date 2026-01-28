@@ -17,6 +17,36 @@ enum INPFileFormat : uint {
 }
 
 /**
+    Tag for the INP payload section.
+*/
+enum string INP_TAG_PAYLOAD = "INP_SECT";
+
+/**
+    Tag for the INP texture section.
+*/
+enum string INP_TAG_TEXTURES = "TEX_SECT";
+
+/**
+    Tag for the INP extended vendor data section.
+*/
+enum string INP_TAG_VENDOR = "EXT_SECT";
+
+/**
+    Texture format ID for PNG.
+*/
+enum ubyte INP_TEX_FMT_PNG = 0;
+
+/**
+    Texture format ID for TGA.
+*/
+enum ubyte INP_TEX_FMT_TGA = 1;
+
+/**
+    Texture format ID for BC7.
+*/
+enum ubyte INP_TEX_FMT_BC7 = 2;
+
+/**
     Determins the INP file format stored within the given stream.
 
     Params:
