@@ -8,3 +8,4 @@
 */
 module inp;
 
+public import inp.format;
