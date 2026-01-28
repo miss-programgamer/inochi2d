@@ -97,7 +97,7 @@ protected:
     */
     override
     void onFinalize() @nogc {
-        super.finalize();
+        super.onFinalize();
 
         foreach_reverse(i; 0..masks_.length) {
             if (Visual nMask = puppet.find!Visual(masks_[i].maskSrcGUID)) {

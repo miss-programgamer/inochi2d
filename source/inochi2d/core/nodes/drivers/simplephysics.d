@@ -253,7 +253,7 @@ protected:
     void onFinalize() {
         this.param_ = puppet.findParameter(paramRef);
         this.reset();
-        super.finalize();
+        super.onFinalize();
     }
 
     /**

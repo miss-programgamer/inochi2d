@@ -146,7 +146,7 @@ protected:
         offsetScreenTint = vec3(0, 0, 0);
         offsetEmissionStrength = 1;
 
-        super.preUpdate(drawList);
+        super.onPreUpdate(drawList);
         this.resetDeform();
     }
 
@@ -159,7 +159,7 @@ protected:
     */
     override
     void onUpdate(float delta, DrawList drawList) {
-        super.update(delta, drawList);
+        super.onUpdate(delta, drawList);
         deformed_.pushMatrix(transform.matrix);
     }
 
@@ -171,7 +171,7 @@ protected:
     */
     override
     void onPostUpdate(DrawList drawList) {
-        super.postUpdate(drawList);
+        super.onPostUpdate(drawList);
         this.drawListSlot = drawList.allocate(deformed_.vertices, deformed_.indices);
     }
 

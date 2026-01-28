@@ -78,7 +78,7 @@ protected:
     */
     override
     void onFinalize() @nogc {
-        super.finalize();
+        super.onFinalize();
         this.rescan();
     }
 
