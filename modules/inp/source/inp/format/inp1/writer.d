@@ -40,21 +40,21 @@ void writeINP1(Stream stream, ref DataNode node) {
     if ("TEX_SECT" in node) {
         writer.writeUTF8("TEX_SECT");
         writer.writeBE!uint(cast(uint)node["TEX_SECT"].length);
-        foreach(ref v; node["TEX_SECT"].array) {
-            writer.writeBE!uint(cast(uint)v["data"].blob.length);
-            writer.writeBE!ubyte(v["encoding"].tryCoerce!ubyte);
-            stream.write(v["data"].blob);
+        foreach(ref value; node["TEX_SECT"].array) {
+            writer.writeBE!uint(cast(uint)value["data"].blob.length);
+            writer.writeBE!ubyte(value["encoding"].tryCoerce!ubyte);
+            stream.write(value["data"].blob);
         }
     }
 
     if ("EXT_SECT" in node) {
         writer.writeUTF8("EXT_SECT");
         writer.writeBE!uint(cast(uint)node["EXT_SECT"].length);
-        foreach(ref kv; node["EXT_SECT"].object) {
-            writer.writeBE!uint(cast(uint)kv.key.length);
-            writer.writeUTF8(kv.key);
-            writer.writeBE!uint(cast(uint)kv.value.blob.length);
-            stream.write(kv.value.blob);
+        foreach(key, ref value; node["EXT_SECT"].object) {
+            writer.writeBE!uint(cast(uint)key.length);
+            writer.writeUTF8(key);
+            writer.writeBE!uint(cast(uint)value.blob.length);
+            stream.write(value.blob);
         }
     }
 }

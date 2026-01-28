@@ -87,11 +87,11 @@ void writeJsonImpl()(StreamWriter writer, auto ref DataNode node) {
         
         case DataNodeType.object_:
             writer.writeLE('{');
-            foreach(i, kv; node.object) {
+            foreach(i, key, ref value; node.object) {
 
-                writer.writeJsonString(kv.key);
+                writer.writeJsonString(key);
                 writer.writeLE(':');
-                writer.writeJsonImpl(kv.value);
+                writer.writeJsonImpl(value);
 
                 if (i+1 < node.length)
                     writer.writeLE(',');

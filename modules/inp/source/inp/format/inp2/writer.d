@@ -99,9 +99,9 @@ void writeINP2Impl()(StreamWriter writer, auto ref DataNode node) {
         
         case DataNodeType.object_:
             writer.writeLE!uint(cast(uint)(INP2_TAG_OBJECT_BEGIN | node.length << 8));
-            foreach(ref kv; node.object) {
-                writer.writeINP2Key(kv.key);
-                writer.writeINP2Impl(kv.value);
+            foreach(string key, ref DataNode value; node.object) {
+                writer.writeINP2Key(key);
+                writer.writeINP2Impl(value);
             }
             writer.writeLE!uint(INP2_TAG_OBJECT_END);
             return;
