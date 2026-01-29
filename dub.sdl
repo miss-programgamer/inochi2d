@@ -23,7 +23,7 @@ dependency "numem" version=">=1.6.4"
 
 stringImportPaths "shaders/"
     
-copyFiles "LICENSE"
+copyFiles "LICENSE" "tech-docs"
 
 // Engine Support Modules
 // subPackage "modules/gdextension"
