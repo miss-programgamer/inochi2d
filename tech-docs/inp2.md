@@ -35,6 +35,9 @@ DataNodes can additionally be recursively complex types consisting of objects an
 |   `0x12` | Object begin sentinel                    | Element Count |
 |   `0x13` | Object end sentinel                      |               |
 
+### Nil value
+If the type tag is `0x00` skip to the next 32-bit aligned word.
+
 ### Numeric and boolean types
 Numeric types are denoted by their tag, followed by their 32 bit value.
 The tag's metadata is ignored.
@@ -47,7 +50,7 @@ Example:
 ```
 
 ### Strings
-If the strings is longer than `16777214` (`0x00FFFFFE`) bytes, the length is appended as a unsigned integer,
+If the string is longer than `16777214` (`0x00FFFFFE`) bytes, the length is appended as a unsigned integer,
 otherwise the length is stored in the metadata.
 
 Example:  
