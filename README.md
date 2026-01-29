@@ -93,3 +93,7 @@ Add with `--d-version=`
 |             Option | Use                                                                                   |
 | -----------------: | :------------------------------------------------------------------------------------ |
 | `IN_VEC3_POSITION` | Use 3D vectors to store the `POSITION` portion of the vertex data.                    |
+
+# Inochi2D Technical Documentation
+Technical documentation for Inochi2D is provided in the `tech-docs/` directory, 
+these are shipped with the SDK.
