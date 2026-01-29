@@ -504,7 +504,7 @@ unittest {
         @prop_expose int a = 24;
         @prop_expose @prop_name("nb") int b;
 
-        // @prop_expose @property int c() nothrow => a;
+        @prop_expose @property int c() nothrow => a;
         @prop_expose @property void c(int v) nothrow { a = v; }
 
         mixin IPropertyOwnerImpl;
@@ -517,7 +517,7 @@ unittest {
 
     t.setProperty("a", 1);
     assert(t.getProperty("a") == 1);
-    assert(t.getProperty("c") != 0);
+    assert(t.getProperty("c") == 1);
 
     t.clearProperty("a");
     assert(t.getProperty("a") == 24);
