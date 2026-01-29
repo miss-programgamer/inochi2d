@@ -10,13 +10,14 @@ module inp.format.inp1.tests;
 import inp.format.inp1;
 import inp.format.node;
 import nulib.io.stream;
+import inp.format;
 
 @("read-write")
 unittest {
     DataNode obj = DataNode.createObject();
-    obj[INP1_MAGIC] = DataNode.createObject();
-    obj[INP1_MAGIC]["a"] = 42;
-    obj[INP1_MAGIC]["b"] = "Hello, world!";
+    obj[INP_TAG_PAYLOAD] = DataNode.createObject();
+    obj[INP_TAG_PAYLOAD]["a"] = 42;
+    obj[INP_TAG_PAYLOAD]["b"] = "Hello, world!";
 
     MemoryStream mstream = new MemoryStream(255);    
     mstream.writeINP1(obj);
@@ -26,6 +27,6 @@ unittest {
     assert(result, result.error);
     auto node = result.get();
 
-    assert(node[INP1_MAGIC]["a"].number == 42);
-    assert(node[INP1_MAGIC]["b"].text == "Hello, world!");
+    assert(node[INP_TAG_PAYLOAD]["a"].number == 42);
+    assert(node[INP_TAG_PAYLOAD]["b"].text == "Hello, world!");
 }

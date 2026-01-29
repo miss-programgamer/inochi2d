@@ -35,7 +35,7 @@ void writeINP1(Stream stream, ref DataNode node) {
     if (INP_TAG_PAYLOAD in node) {
         writer.writeUTF8(INP1_MAGIC);
 
-        ubyte[] payload = node[INP1_MAGIC].makeJsonPayload();
+        ubyte[] payload = node[INP_TAG_PAYLOAD].makeJsonPayload();
         writer.writeBE!uint(cast(uint)payload.length);
         stream.write(payload);
 

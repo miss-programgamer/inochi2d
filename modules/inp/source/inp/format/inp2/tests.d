@@ -15,6 +15,10 @@ import nulib.io.stream;
 unittest {
     import inp.format.inp2;
     
+    import std.stdio : writefln;
+    import nulib.digest.crc : crc32;
+    writefln("%x", crc32(cast(ubyte[])"Hello, world!"));
+
     DataNode obj = DataNode.createObject();
     obj["a"] = 42;
     obj["b"] = "Hello, world!";

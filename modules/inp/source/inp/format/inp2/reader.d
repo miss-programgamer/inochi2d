@@ -98,14 +98,20 @@ string readINP2Impl()(StreamReader reader, ref DataNode node) {
             return null;
 
         case INP2_TAG_STRING:
-            uint len = reader.readU32LE();
+            uint len = (tag & INP2_META_MASK) == 0xFFFFFF00 ?
+                reader.readU32LE() :
+                (tag & INP2_META_MASK) >> 8;
+            
             auto str = reader.readUTF8(len);
             node = DataNode(str[]);
             reader.realignINP2();
             return null;
         
         case INP2_TAG_BLOB:
-            uint len    = reader.readU32LE();
+            uint len = (tag & INP2_META_MASK) == 0xFFFFFF00 ?
+                reader.readU32LE() :
+                (tag & INP2_META_MASK) >> 8;
+            
             ubyte[] buffer = nu_malloca!ubyte(len);
 
             reader.stream.read(buffer);

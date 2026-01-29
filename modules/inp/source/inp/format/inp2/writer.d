@@ -78,15 +78,32 @@ void writeINP2Impl()(StreamWriter writer, auto ref DataNode node) {
             return;
         
         case DataNodeType.string_:
-            writer.writeLE!uint(INP2_TAG_STRING);
-            writer.writeLE!uint(cast(uint)node.text.length);
+            if (node.text.length > 0xFFFFFE) {
+                writer.writeLE!uint(INP2_TAG_STRING | 0xFFFFFF00);
+                writer.writeLE!uint(cast(uint)node.text.length);
+                writer.writeUTF8(node.text);
+                writer.writeINP2Padding();
+                return;
+            }
+            
+            writer.writeLE!uint(cast(uint)(INP2_TAG_STRING | (node.text.length << 8)));
             writer.writeUTF8(node.text);
             writer.writeINP2Padding();
             return;
         
         case DataNodeType.blob_:
-            writer.writeLE!uint(INP2_TAG_BLOB);
-            writer.writeLE!uint(cast(uint)node.blob.length);
+            if (node.blob.length > 0xFFFFFE) {
+                writer.writeLE!uint(INP2_TAG_BLOB | 0xFFFFFF00);
+                writer.writeLE!uint(cast(uint)node.blob.length);
+                writer.stream.write(node.blob);
+                writer.writeINP2Padding();
+
+                // Blobs have crc32 checksums.
+                writer.writeLE(crc32(node.blob));
+                return;
+            }
+
+            writer.writeLE!uint(cast(uint)(INP2_TAG_BLOB | (node.blob.length << 8)));
             writer.stream.write(node.blob);
             writer.writeINP2Padding();
 
