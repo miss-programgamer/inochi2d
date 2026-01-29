@@ -137,21 +137,6 @@ public:
         Whether the transform should snap to pixels
     */
     bool pixelSnap = false;
-
-    /**
-        Calculates offset to other vector.
-    */
-    Transform calcOffset(Transform other) @nogc {
-        Transform tnew;
-
-        tnew.translation = this.translation+other.translation;
-        tnew.rotation = this.rotation+other.rotation;
-        tnew.scale = this.scale*other.scale;
-        tnew.update();
-
-        return tnew;
-    }
-
     /**
         Returns the result of 2 transforms multiplied together
     */
@@ -169,6 +154,20 @@ public:
         // SCALE
         tnew.scale = this.scale*other.scale;
         tnew.trs = strs;
+        return tnew;
+    }
+
+    /**
+        Returns the result of 2 transforms multiplied together
+    */
+    Transform opBinary(string op : "+")(Transform other) @nogc {
+        Transform tnew;
+
+        tnew.translation = this.translation+other.translation;
+        tnew.rotation = this.rotation+other.rotation;
+        tnew.scale = this.scale*other.scale;
+        tnew.update();
+
         return tnew;
     }
 
@@ -215,6 +214,40 @@ public:
         object.tryGetRef(rotation, "rot");
         object.tryGetRef(scale, "scale");
     }
+}
+
+/**
+    Gets a relative vector between 2 matrices.
+
+    Params:
+        lhs = The left hand side matrix.
+        rhs = The right hand side matrix.
+    
+    Returns:
+        A vector describing the relative translation between
+        the 2 matrices.
+*/
+vec3 relativeVectorTo(mat4 lhs, mat4 rhs) @nogc pure {
+    mat4 cm = (lhs.inverse * rhs).translation;
+    return vec3(cm.matrix[0][3], cm.matrix[1][3], cm.matrix[2][3]);
+}
+
+/**
+    Gets a relative vector between 2 matrices, with the 
+    multiplication-order of the left-hand and right-hand 
+    side inverted.
+
+    Params:
+        lhs = The left hand side matrix.
+        rhs = The right hand side matrix.
+    
+    Returns:
+        A vector describing the relative translation between
+        the 2 matrices.
+*/
+vec3 relativeVectorToInverse(mat4 lhs, mat4 rhs) @nogc pure {
+    mat4 cm = (rhs * lhs.inverse).translation;
+    return vec3(cm.matrix[0][3], cm.matrix[1][3], cm.matrix[2][3]);
 }
 
 int[] findSurroundingTriangle(vec2 pt, ref MeshData bindingMesh) {

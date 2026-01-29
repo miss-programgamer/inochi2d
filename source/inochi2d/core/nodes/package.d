@@ -36,17 +36,38 @@ __gshared TypeRegistry!Node in_node_registry;
     A node in the Inochi2D rendering tree
 */
 @TypeId("Node", 0x00000000)
-class Node : NuRefCounted, ISerializable, IDeserializable {
+class Node : NuRefCounted, IPropertyOwner, ISerializable, IDeserializable {
 private:
+@nogc:
     Puppet puppet_;
     Node parent_;
     weak_vector!Node children_;
     GUID guid_;
-    float zsort_ = 0;
     bool lockToRoot_;
     string nodePath_;
     uint nid_;
-    bool recalculateTransform = true;
+
+    bool recalculateTransform_ = true;
+    Transform globalTransform_;
+    Transform globalTransformNoParam_;
+    offset_value!Transform localTransform_;
+    offset_value!float zSort_;
+    void recalculateTransforms() {
+        if (recalculateTransform_) {
+            localTransform_.base.update();
+            localTransform_.offset.update();
+            if (lockToRoot_) {
+                globalTransform_ = (localTransform_.base + localTransform_.offset) * puppet.root.localTransform_.base;
+                globalTransformNoParam_ = localTransform_.base * puppet.root.localTransform_.base;
+            } else if (parent !is null) {
+                globalTransform_ = (localTransform_.base + localTransform_.offset) * parent.transform();
+                globalTransformNoParam_ = localTransform_.base * parent.transform();
+            } else {
+                globalTransform_ = (localTransform_.base + localTransform_.offset);
+                globalTransformNoParam_ = localTransform_.base;
+            }
+        }
+    }
 
 package(inochi2d):
 
@@ -65,21 +86,6 @@ protected:
     final @property uint nid() @nogc pure => nid_;
 
     /**
-        The offset to the transform to apply
-    */
-    Transform transformOffset;
-
-    /**
-        The offset to apply to sorting
-    */
-    float offsetSort = 0f;
-
-    // Send mask reset request one node up
-    void resetMask() {
-        if (parent !is null) parent.resetMask();
-    }
-
-    /**
         Serializes this node to a DataNode.
 
         Params:
@@ -92,8 +98,8 @@ protected:
         object["name"] = name[];
         object["type"] = typeId.sid;
         object["enabled"] = enabled;
-        object["zsort"] = zsort_;
-        object["transform"] = zsort_;
+        object["zsort"] = zSort_.base;
+        object["transform"] = localTransform_.base.serialize();
         object["lockToRoot"] = lockToRoot_;
 
         // Recurse through children if enabled.
@@ -119,8 +125,8 @@ protected:
         this.guid_ = object.tryGetGUID("uuid", "guid");
         object.tryGetRef(name, "name");
         object.tryGetRef(enabled, "enabled");
-        object.tryGetRef(zsort_, "zsort");
-        object.tryGetRef(localTransform, "transform");
+        object.tryGetRef(zSort_.base, "zsort");
+        object.tryGetRef(localTransform_.base, "transform");
         object.tryGetRef(lockToRoot_, "lockToRoot");
 
         // Pre-populate our children with the correct types
@@ -205,158 +211,17 @@ public:
     nstring name = "Unnamed Node";
 
     /**
-        The Node's Type ID
+        The local transform.
     */
-    final @property TypeId typeId() @nogc => in_node_registry.lookup(this);
 
     /**
-        The node's GUID.
+        The Z-sorting value.
     */
-    @property GUID guid() @nogc nothrow pure => guid_;
 
     /**
-        Whether the node is enabled for rendering
-
-        Disabled nodes will not be drawn.
-
-        This happens recursively
+        The puppet this node is attached to
     */
-    @property bool renderEnabled() @nogc nothrow pure => parent ? (!parent.renderEnabled ? false : enabled) : enabled;
-
-    /**
-        The relative Z sorting
-    */
-    @property ref float relZSort() @nogc nothrow pure => zsort_;
-
-    /**
-        The basis zSort offset.
-    */
-    @property float zSortBase() @nogc nothrow pure => parent !is null ? parent.zSort() : 0;
-
-    /**
-        The Z sorting without parameter offsets
-    */
-    @property float zSortNoOffset() @nogc nothrow pure => zSortBase + relZSort;
-
-    /**
-        The Z sorting
-    */
-    @property float zSort() @nogc nothrow pure => zSortBase + relZSort + offsetSort;
-    @property void zSort(float value) @nogc nothrow pure {
-        zsort_ = value;
-    }
-
-    /**
-        Lock translation to root
-    */
-    @property bool lockToRoot() @nogc nothrow pure => lockToRoot_;
-    @property void lockToRoot(bool value) @nogc {
-        
-        // Automatically handle converting lock space and proper world space.
-        if (value && !lockToRoot_) {
-            localTransform.translation = transformNoLock().translation;
-        } else if (!value && lockToRoot_) {
-            localTransform.translation = localTransform.translation-parent.transformNoLock().translation;
-        }
-
-        lockToRoot_ = value;
-    }
-
-    ~this() {
-        foreach(child; children_) {
-            child.release();
-        }
-        children_.clear();
-    }
-
-    /**
-        Constructs a new puppet root node
-    */
-    this(Puppet puppet) @nogc {
-        this.puppet_ = puppet;
-        this.guid_ = inNewGUID();
-    }
-
-    /**
-        Constructs a new node
-    */
-    this(Node parent = null) @nogc {
-        this(inNewGUID(), parent);
-    }
-
-    /**
-        Constructs a new node with an UUID
-    */
-    this(GUID guid, Node parent = null) @nogc {
-        this.parent = parent;
-        this.guid_ = guid;
-    }
-
-    /**
-        The local transform of the node
-    */
-    Transform localTransform;
-
-    /**
-        The cached world space transform of the node
-    */
-    Transform globalTransform;
-
-    /**
-        The transform in world space
-    */
-    @property Transform transform(bool ignoreParam=false)() @nogc {
-        static if (!ignoreParam) {
-            if (recalculateTransform) {
-                localTransform.update();
-                transformOffset.update();
-                if (lockToRoot_)
-                    globalTransform = localTransform.calcOffset(transformOffset) * puppet.root.localTransform;
-                else if (parent !is null)
-                    globalTransform = localTransform.calcOffset(transformOffset) * parent.transform();
-                else
-                    globalTransform = localTransform.calcOffset(transformOffset);
-
-                recalculateTransform = false;
-            }
-            return globalTransform;
-
-        } else {
-            Transform mts;
-            if (lockToRoot_)
-                mts = localTransform * puppet.root.localTransform;
-            else if (parent !is null)
-                mts = localTransform * parent.transform();
-            else
-                mts = localTransform;
-            
-            return mts;
-        }
-    }
-
-    /**
-        The transform in world space without locking
-    */
-    @property Transform transformLocal() @nogc {
-        localTransform.update();
-        
-        return localTransform.calcOffset(transformOffset);
-    }
-
-    /**
-        The transform in world space without locking
-    */
-    @property Transform transformNoLock() @nogc {
-        localTransform.update();
-        
-        if (parent !is null) return localTransform * parent.transform();
-        return localTransform;
-    }
-
-    /**
-        Gets a list of this node's children
-    */
-    final @property Node[] children() @nogc nothrow pure => children_;
+    final @property Puppet puppet() @nogc nothrow pure => parent_ !is null ? parent_.puppet : puppet_;
 
     /**
         The parent of this node
@@ -367,71 +232,74 @@ public:
     }
 
     /**
-        The puppet this node is attached to
+        Gets a list of this node's children
     */
-    final @property Puppet puppet() @nogc nothrow pure => parent_ !is null ? parent_.puppet : puppet_;
+    final @property Node[] children() @nogc nothrow pure => children_;
 
     /**
-        Calculates the relative position between 2 nodes and applies the offset.
-        You should call this before reparenting nodes.
+        The Node's Type ID
     */
-    void setRelativeTo(Node to) {
-        setRelativeTo(to.transformNoLock.matrix);
-        this.zSort = this.zSortNoOffset-to.zSortNoOffset;
-    }
+    final @property TypeId typeId() @nogc => in_node_registry.lookup(this);
 
     /**
-        Calculates the relative position between this node and a matrix and applies the offset.
-        This does not handle zSorting. Pass a Node for that.
+        The node's GUID.
     */
-    void setRelativeTo(mat4 to) {
-        this.localTransform.translation = getRelativePosition(to, this.transformNoLock.matrix);
-        this.localTransform.update();
-    }
+    @property GUID guid() @nogc nothrow pure => guid_;
 
     /**
-        Gets a relative position for 2 matrices
+        Local-space Z-sorting value
     */
-    static
-    vec3 getRelativePosition(mat4 m1, mat4 m2) {
-        mat4 cm = (m1.inverse * m2).translation;
-        return vec3(cm.matrix[0][3], cm.matrix[1][3], cm.matrix[2][3]);
-    }
+    @property ref float localZSort() => zSort_.base;
 
     /**
-        Gets a relative position for 2 matrices
-
-        Inverse order of getRelativePosition
+        World-space Z-sorting value
     */
-    static
-    vec3 getRelativePositionInv(mat4 m1, mat4 m2) {
-        mat4 cm = (m2 * m1.inverse).translation;
-        return vec3(cm.matrix[0][3], cm.matrix[1][3], cm.matrix[2][3]);
-    }
+    @property float zSort() => (parent ? parent.zSort : 0) + zSort_;
+    
+    /**
+        The transform in local-space.
+    */
+    @property ref Transform localTransform() @nogc => localTransform_.base;
 
     /**
-        Gets the path to the node.
+        The transform in world space without locking
     */
-    final
-    string getNodePath() {
-        import std.array : join;
-        if (nodePath_.length > 0) return nodePath_;
-
-        string[] pathSegments;
-        Node parent = this;
-        while(parent !is null) {
-            pathSegments = [parent.name[]] ~ pathSegments;
-            parent = parent.parent;
-        }
+    @property Transform transformNoLock() @nogc {
+        localTransform_.base.update();
         
-        nodePath_ = "/"~pathSegments.join("/");
-        return nodePath_;
+        if (parent !is null) return localTransform_.base * parent.transform();
+        return localTransform_.base;
     }
 
     /**
-        Gets the depth of this node
+        The transform in world space
     */
-    final int depth() {
+    @property Transform transform(bool ignoreParams=false)() @nogc {
+        this.recalculateTransforms();
+        static if (ignoreParams)
+            return globalTransformNoParam_;
+        else
+            return globalTransform_;
+    }
+
+    /**
+        Whether transformation is locked to the root node.
+    */
+    @property bool lockToRoot() @nogc nothrow pure => lockToRoot_;
+    @property void lockToRoot(bool value) @nogc {
+        if (value && !lockToRoot_) {
+            localTransform_.base.translation = this.transformNoLock.translation;
+        } else if (!value && lockToRoot_) {
+            localTransform_.base.translation = localTransform_.base.translation-parent.transformNoLock.translation;
+        }
+
+        lockToRoot_ = value;
+    }
+
+    /**
+        The depth of this node in the node hirearchy
+    */
+    final @property int depth() {
         int depthV;
         Node parent = this;
         while(parent !is null) {
@@ -439,6 +307,82 @@ public:
             parent = parent.parent;
         }
         return depthV;
+    }
+
+    /// Destructor
+    ~this() {
+        foreach(child; children_) {
+            child.release();
+        }
+        children_.clear();
+    }
+
+    /**
+        Constructs a new puppet root node.
+
+        Params:
+            parent = The puppet this node will belong to.
+    */
+    this(Puppet parent) @nogc {
+        this.puppet_ = parent;
+        this.guid_ = inNewGUID();
+    }
+
+    /**
+        Constructs a new node
+
+        Params:
+            parent = The node to parent the new node to.
+    */
+    this(Node parent = null) @nogc {
+        this(inNewGUID(), parent);
+    }
+
+    /**
+        Constructs a new node with an GUID
+
+        Params:
+            guid =      The GUID to apply to the node.
+            parent =    The node to parent the new node to.
+    */
+    this(GUID guid, Node parent = null) @nogc {
+        this.parent = parent;
+        this.guid_ = guid;
+    }
+
+    /**
+        Notifies this node and its children that the transform 
+        has changed.
+    */
+    final void notifyTransformChanged() @nogc nothrow {
+        recalculateTransform_ = true;
+        foreach(child; children) {
+            child.notifyTransformChanged();
+        }
+    }
+
+    /**
+        Calculates the relative position between 2 nodes and applies the offset.
+        You should call this before reparenting nodes.
+
+        Params:
+            to = The node to set this node relative to.
+    */
+    void setRelativeTo(Node to) {
+        setRelativeTo(to.transformNoLock.matrix);
+        this.localZSort = this.localZSort-to.localZSort;
+    }
+
+    /**
+        Calculates the relative position between this node and a matrix and applies the offset.
+        This does not handle zSorting. Pass a Node for that.
+
+        Params:
+            to = The matrix to set this node's transform relative to.
+    */
+    void setRelativeTo(mat4 to) {
+        localTransform_.base.translation = to.relativeVectorTo(transformNoLock.matrix);
+        localTransform_.base.update();
     }
 
     /**
@@ -525,187 +469,37 @@ public:
     }
 
     /**
+        Gets whether nodes can be reparented
+    */
+    bool canReparent(Node to) {
+        Node tmp = to;
+        while(tmp !is null) {
+            if (tmp.guid == this.guid) return false;
+            
+            // Check next up
+            tmp = tmp.parent;
+        }
+        return true;
+    }
+
+    /** 
+        Set new Parent
+    */
+    void reparent(Node parent, ulong pOffset) {
+        if (parent !is null)
+            setRelativeTo(parent);
+        insertInto(parent, cast(size_t)pOffset);
+    }
+
+    /**
         Applies an offset to the Node's transform.
 
         Params:
             other = The transform to offset the current global transform by.
     */
     void offsetTransform(Transform other) @nogc {
-        globalTransform = globalTransform.calcOffset(other);
-        globalTransform.update();
-    }
-
-    /**
-        Gets whether the node has the given parameter key.
-
-        Params:
-            key = The key to query.
-        
-        Returns:
-            $(D true) if the node has a key of the given name,
-            $(D false) otherwise.
-    */
-    bool hasParam(string key) @nogc {
-        switch(key) {
-            case "zSort":
-            case "transform.t.x":
-            case "transform.t.y":
-            case "transform.t.z":
-            case "transform.r.x":
-            case "transform.r.y":
-            case "transform.r.z":
-            case "transform.s.x":
-            case "transform.s.y":
-                return true;
-            default:
-                return false;
-        }
-    }
-
-    /**
-        Gets the default value for a node parameter.
-
-        Params:
-            key =   The key to get.
-
-        Returns:
-            The default value for a given node parameter.
-    */
-    float getDefaultValue(string key) @nogc {
-        switch(key) {
-            case "zSort":
-            case "transform.t.x":
-            case "transform.t.y":
-            case "transform.t.z":
-            case "transform.r.x":
-            case "transform.r.y":
-            case "transform.r.z":
-                return 0;
-            case "transform.s.x":
-            case "transform.s.y":
-                return 1;
-            default:
-                return float();
-        }
-    }
-
-    /**
-        Sets a node parameter value.
-
-        Params:
-            key =   The key to set.
-            value = The value to set.
-        
-        Returns:
-            $(D true) if the operation succeded,
-            $(D false) otherwise.
-    */
-    bool setValue(string key, float value) @nogc {
-        switch(key) {
-            case "zSort":
-                offsetSort += value;
-                return true;
-            case "transform.t.x":
-                transformOffset.translation.x += value;
-                notifyTransformChanged();
-                return true;
-            case "transform.t.y":
-                transformOffset.translation.y += value;
-                notifyTransformChanged();
-                return true;
-            case "transform.t.z":
-                transformOffset.translation.z += value;
-                notifyTransformChanged();
-                return true;
-            case "transform.r.x":
-                transformOffset.rotation.x += value;
-                notifyTransformChanged();
-                return true;
-            case "transform.r.y":
-                transformOffset.rotation.y += value;
-                notifyTransformChanged();
-                return true;
-            case "transform.r.z":
-                transformOffset.rotation.z += value;
-                notifyTransformChanged();
-                return true;
-            case "transform.s.x":
-                transformOffset.scale.x *= value;
-                notifyTransformChanged();
-                return true;
-            case "transform.s.y":
-                transformOffset.scale.y *= value;
-                notifyTransformChanged();
-                return true;
-            default: return false;
-        }
-    }
-
-    /**
-        Scale an offset value, given an axis and a scale
-
-        If axis is -1, apply magnitude and sign to signed properties.
-        If axis is 0 or 1, apply magnitude only unless the property is
-        signed and aligned with that axis.
-
-        Note that scale adjustments are not considered aligned,
-        since we consider preserving aspect ratio to be the user
-        intent by default.
-    */
-    float scaleValue(string key, float value, int axis, float scale) @nogc {
-        if (axis == -1) return value * scale;
-
-        float newVal = abs(scale) * value;
-        switch(key) {
-            case "transform.r.z": // Z-rotation is XY-mirroring
-                newVal = scale * value;
-                break;
-            case "transform.r.y": // Y-rotation is X-mirroring
-            case "transform.t.x":
-                if (axis == 0) newVal = scale * value;
-                break;
-            case "transform.r.x": // X-rotation is Y-mirroring
-            case "transform.t.y":
-                if (axis == 1) newVal = scale * value;
-                break;
-            default:
-                break;
-        }
-        return newVal;
-    }
-
-    /**
-        Gets the parameter editable value for a given key.
-
-        Params:
-            key = The key to query.
-        
-        Returns:
-            The value of the given named node parameter.
-    */
-    float getValue(string key) @nogc {
-        switch(key) {
-            case "zSort":           return offsetSort;
-            case "transform.t.x":   return transformOffset.translation.x;
-            case "transform.t.y":   return transformOffset.translation.y;
-            case "transform.t.z":   return transformOffset.translation.z;
-            case "transform.r.x":   return transformOffset.rotation.x;
-            case "transform.r.y":   return transformOffset.rotation.y;
-            case "transform.r.z":   return transformOffset.rotation.z;
-            case "transform.s.x":   return transformOffset.scale.x;
-            case "transform.s.y":   return transformOffset.scale.y;
-            default:                return 0;
-        }
-    }
-
-    /**
-        Deserializes this node from a DataNode.
-
-        Params:
-            object = The DataNode to deserialize from.
-    */
-    final void deserialize(ref DataNode object) @nogc {
-        this.onDeserialize(object);
+        globalTransform_ = globalTransform_ + other;
+        globalTransform_.update();
     }
 
     /**
@@ -732,6 +526,16 @@ public:
     }
 
     /**
+        Deserializes this node from a DataNode.
+
+        Params:
+            object = The DataNode to deserialize from.
+    */
+    final void deserialize(ref DataNode object) @nogc {
+        this.onDeserialize(object);
+    }
+
+    /**
         Finalizes this node and its children.
     */
     final void finalize() @nogc {
@@ -752,8 +556,8 @@ public:
     final void preUpdate(DrawList drawList) @nogc {
         if (!enabled) return;
 
-        transformOffset.clear();
-        offsetSort = 0;
+        localTransform_.offset.clear();
+        zSort_.offset = 0;
 
         this.onPreUpdate(drawList);
         foreach(child; children_) {
@@ -819,14 +623,130 @@ public:
     }
 
     /**
-        Notifies this node and its children that the transform 
-        has changed.
-    */
-    void notifyTransformChanged() @nogc {
-        recalculateTransform = true;
+        Gets whether a property with the given name exists
+        in the object.
 
-        foreach(child; children) {
-            child.notifyTransformChanged();
+        Params:
+            key = The name of the property.
+        
+        Returns:
+            $(D true) if the property exists,
+            $(D false) otherwise.
+    */
+    bool hasProperty(string key) @nogc nothrow {
+        switch(key) {
+            case "zSort":
+            case "transform.t.x":
+            case "transform.t.y":
+            case "transform.t.z":
+            case "transform.r.x":
+            case "transform.r.y":
+            case "transform.r.z":
+            case "transform.s.x":
+            case "transform.s.y":
+                return true;
+            default:
+                return false;
+        }
+    }
+
+    /**
+        Gets the value of a given property.
+
+        Params:
+            key = The name of the property.
+        
+        Returns:
+            The floating point value of the property.
+    */
+    float getProperty(string key) @nogc nothrow {
+        switch(key) {
+            case "zSort":           return zSort_.offset;
+            case "transform.t.x":   return localTransform_.offset.translation.x;
+            case "transform.t.y":   return localTransform_.offset.translation.y;
+            case "transform.t.z":   return localTransform_.offset.translation.z;
+            case "transform.r.x":   return localTransform_.offset.rotation.x;
+            case "transform.r.y":   return localTransform_.offset.rotation.y;
+            case "transform.r.z":   return localTransform_.offset.rotation.z;
+            case "transform.s.x":   return localTransform_.offset.scale.x;
+            case "transform.s.y":   return localTransform_.offset.scale.y;
+            default:                return 0;
+        }
+    }
+
+    /**
+        Gets the default value of a given property.
+
+        Params:
+            key = The name of the property.
+        
+        Returns:
+            The default value of the property.
+    */
+    float getPropertyDefault(string key) @nogc nothrow {
+        switch(key) {
+            case "zSort":
+            case "transform.t.x":
+            case "transform.t.y":
+            case "transform.t.z":
+            case "transform.r.x":
+            case "transform.r.y":
+            case "transform.r.z":
+                return 0;
+            case "transform.s.x":
+            case "transform.s.y":
+                return 1;
+            default:
+                return 0;
+        }
+    }
+
+    /**
+        Sets the value of the property.
+
+        Params:
+            key =   The name of the property.
+            value = The value to set the property to.
+    */
+    void setProperty(string key, float value) @nogc nothrow {
+        switch(key) {
+            case "zSort":
+                zSort_.offset += value;
+                return;
+            case "transform.t.x":
+                localTransform_.offset.translation.x += value;
+                this.notifyTransformChanged();
+                return;
+            case "transform.t.y":
+                localTransform_.offset.translation.y += value;
+                this.notifyTransformChanged();
+                return;
+            case "transform.t.z":
+                localTransform_.offset.translation.z += value;
+                this.notifyTransformChanged();
+                return;
+            case "transform.r.x":
+                localTransform_.offset.rotation.x += value;
+                this.notifyTransformChanged();
+                return;
+            case "transform.r.y":
+                localTransform_.offset.rotation.y += value;
+                this.notifyTransformChanged();
+                return;
+            case "transform.r.z":
+                localTransform_.offset.rotation.z += value;
+                this.notifyTransformChanged();
+                return;
+            case "transform.s.x":
+                localTransform_.offset.scale.x *= value;
+                this.notifyTransformChanged();
+                return;
+            case "transform.s.y":
+                localTransform_.offset.scale.y *= value;
+                this.notifyTransformChanged();
+                return;
+            default:
+                return;
         }
     }
 
@@ -836,74 +756,6 @@ public:
     override
     string toString() const {
         return name[];
-    }
-
-    rect getCombinedBoundsRect(bool reupdate = false, bool countPuppet=false)() {
-        vec4 combinedBounds = getCombinedBounds!(reupdate, countPuppet)();
-        return rect(
-            combinedBounds.x, 
-            combinedBounds.y, 
-            combinedBounds.z-combinedBounds.x, 
-            combinedBounds.w-combinedBounds.y
-        );
-    }
-
-    vec4 getInitialBoundsSize() {
-        auto tr = transform;
-        return vec4(tr.translation.x, tr.translation.y, tr.translation.x, tr.translation.y);
-    }
-
-    /**
-        Gets the combined bounds of the node
-    */
-    vec4 getCombinedBounds(bool reupdate = false, bool countPuppet=false)() {
-        vec4 combined = getInitialBoundsSize();
-        
-        // Get Bounds as drawable
-        if (Drawable drawable = cast(Drawable)this) {
-            if (reupdate) drawable.updateBounds();
-            combined = drawable.bounds;
-        }
-
-        foreach(child; children) {
-            vec4 cbounds = child.getCombinedBounds!(reupdate)();
-            if (cbounds.x < combined.x) combined.x = cbounds.x;
-            if (cbounds.y < combined.y) combined.y = cbounds.y;
-            if (cbounds.z > combined.z) combined.z = cbounds.z;
-            if (cbounds.w > combined.w) combined.w = cbounds.w;
-        }
-
-        static if (countPuppet) {
-            return vec4(
-                (puppet.transform.matrix*vec4(combined.xy, 0, 1)).xy,
-                (puppet.transform.matrix*vec4(combined.zw, 0, 1)).xy,
-            );
-        } else {
-            return combined;
-        }
-    }
-
-    /**
-        Gets whether nodes can be reparented
-    */
-    bool canReparent(Node to) {
-        Node tmp = to;
-        while(tmp !is null) {
-            if (tmp.guid == this.guid) return false;
-            
-            // Check next up
-            tmp = tmp.parent;
-        }
-        return true;
-    }
-
-    /** 
-        Set new Parent
-    */
-    void reparent(Node parent, ulong pOffset) {
-        if (parent !is null)
-            setRelativeTo(parent);
-        insertInto(parent, cast(size_t)pOffset);
     }
 }
 mixin Register!(Node, in_node_registry);

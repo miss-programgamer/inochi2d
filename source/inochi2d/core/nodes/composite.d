@@ -110,7 +110,7 @@ protected:
     */
     override
     void onDraw(float delta, DrawList drawList, MaskingMode mode) {
-        if (!renderEnabled || visible_.length == 0)
+        if (visible_.length == 0)
             return;
         
         CompositeVars compositeVars = CompositeVars(
@@ -192,10 +192,19 @@ public:
         super(guid, parent);
     }
 
-    override
-    bool hasParam(string key) {
-        if (super.hasParam(key)) return true;
+    /**
+        Gets whether a property with the given name exists
+        in the object.
 
+        Params:
+            key = The name of the property.
+        
+        Returns:
+            $(D true) if the property exists,
+            $(D false) otherwise.
+    */
+    override
+    bool hasProperty(string key) {
         switch(key) {
             case "opacity":
             case "tint.r":
@@ -205,17 +214,46 @@ public:
             case "screenTint.g":
             case "screenTint.b":
                 return true;
+
             default:
-                return false;
+                return super.hasProperty(key);
         }
     }
 
-    override
-    float getDefaultValue(string key) {
-        // Skip our list of our parent already handled it
-        float def = super.getDefaultValue(key);
-        if (def.isFinite) return def;
+    /**
+        Gets the value of a given property.
 
+        Params:
+            key = The name of the property.
+        
+        Returns:
+            The floating point value of the property.
+    */
+    override
+    float getProperty(string key) {
+        switch(key) {
+            case "opacity":         return offsetOpacity;
+            case "tint.r":          return offsetTint.x;
+            case "tint.g":          return offsetTint.y;
+            case "tint.b":          return offsetTint.z;
+            case "screenTint.r":    return offsetScreenTint.x;
+            case "screenTint.g":    return offsetScreenTint.y;
+            case "screenTint.b":    return offsetScreenTint.z;
+            default:                return super.getProperty(key);
+        }
+    }
+
+    /**
+        Gets the default value of a given property.
+
+        Params:
+            key = The name of the property.
+        
+        Returns:
+            The default value of the property.
+    */
+    override
+    float getPropertyDefault(string key) {
         switch(key) {
             case "opacity":
             case "tint.r":
@@ -226,53 +264,45 @@ public:
             case "screenTint.g":
             case "screenTint.b":
                 return 0;
-            default: return float();
+            default: 
+                return super.getPropertyDefault(key);
         }
     }
 
-    override
-    bool setValue(string key, float value) {
-        
-        // Skip our list of our parent already handled it
-        if (super.setValue(key, value)) return true;
+    /**
+        Sets the value of the property.
 
+        Params:
+            key =   The name of the property.
+            value = The value to set the property to.
+    */
+    override
+    void setProperty(string key, float value) {
         switch(key) {
             case "opacity":
                 offsetOpacity *= value;
-                return true;
+                return;
             case "tint.r":
                 offsetTint.x *= value;
-                return true;
+                return;
             case "tint.g":
                 offsetTint.y *= value;
-                return true;
+                return;
             case "tint.b":
                 offsetTint.z *= value;
-                return true;
+                return;
             case "screenTint.r":
                 offsetScreenTint.x += value;
-                return true;
+                return;
             case "screenTint.g":
                 offsetScreenTint.y += value;
-                return true;
+                return;
             case "screenTint.b":
                 offsetScreenTint.z += value;
-                return true;
-            default: return false;
-        }
-    }
-    
-    override
-    float getValue(string key) {
-        switch(key) {
-            case "opacity":         return offsetOpacity;
-            case "tint.r":          return offsetTint.x;
-            case "tint.g":          return offsetTint.y;
-            case "tint.b":          return offsetTint.z;
-            case "screenTint.r":    return offsetScreenTint.x;
-            case "screenTint.g":    return offsetScreenTint.y;
-            case "screenTint.b":    return offsetScreenTint.z;
-            default:                return super.getValue(key);
+                return;
+            default:
+                super.setProperty(key, value);
+                return;
         }
     }
 

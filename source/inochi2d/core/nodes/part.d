@@ -194,7 +194,7 @@ protected:
             return;
         }
 
-        if (!renderEnabled)
+        if (!this.enabled)
             return;
 
         PartVars vars = PartVars(
@@ -393,9 +393,31 @@ public:
         deformed_.deform(offset, deform);
     }
 
+    /**
+        Applies an offset to the Node's transform.
+
+        Params:
+            other = The transform to offset the current global transform by.
+    */
     override
-    bool hasParam(string key) {
-        if (super.hasParam(key)) return true;
+    void offsetTransform(Transform other) @nogc {
+        super.offsetTransform(other);
+    }
+
+    /**
+        Gets whether a property with the given name exists
+        in the object.
+
+        Params:
+            key = The name of the property.
+        
+        Returns:
+            $(D true) if the property exists,
+            $(D false) otherwise.
+    */
+    override
+    bool hasProperty(string key) {
+        if (super.hasProperty(key)) return true;
 
         switch(key) {
             case "opacity":
@@ -412,12 +434,41 @@ public:
         }
     }
 
-    override
-    float getDefaultValue(string key) {
-        // Skip our list of our parent already handled it
-        float def = super.getDefaultValue(key);
-        if (!isNaN(def)) return def;
+    /**
+        Gets the value of a given property.
 
+        Params:
+            key = The name of the property.
+        
+        Returns:
+            The floating point value of the property.
+    */
+    override
+    float getProperty(string key) {
+        switch(key) {
+            case "opacity":             return offsetOpacity;
+            case "tint.r":              return offsetTint.x;
+            case "tint.g":              return offsetTint.y;
+            case "tint.b":              return offsetTint.z;
+            case "screenTint.r":        return offsetScreenTint.x;
+            case "screenTint.g":        return offsetScreenTint.y;
+            case "screenTint.b":        return offsetScreenTint.z;
+            case "emissionStrength":    return offsetEmissionStrength;
+            default:                    return super.getProperty(key);
+        }
+    }
+
+    /**
+        Gets the default value of a given property.
+
+        Params:
+            key = The name of the property.
+        
+        Returns:
+            The default value of the property.
+    */
+    override
+    float getPropertyDefault(string key) {
         switch(key) {
             case "alphaThreshold":
                 return 0;
@@ -432,70 +483,48 @@ public:
                 return 0;
             case "emissionStrength":
                 return 1;
-            default: return float();
-        }
-    }
-
-    override
-    bool setValue(string key, float value) {
-        
-        // Skip our list of our parent already handled it
-        if (super.setValue(key, value)) return true;
-
-        switch(key) {
-            case "opacity":
-                offsetOpacity *= value;
-                return true;
-            case "tint.r":
-                offsetTint.x *= value;
-                return true;
-            case "tint.g":
-                offsetTint.y *= value;
-                return true;
-            case "tint.b":
-                offsetTint.z *= value;
-                return true;
-            case "screenTint.r":
-                offsetScreenTint.x += value;
-                return true;
-            case "screenTint.g":
-                offsetScreenTint.y += value;
-                return true;
-            case "screenTint.b":
-                offsetScreenTint.z += value;
-                return true;
-            case "emissionStrength":
-                offsetEmissionStrength += value;
-                return true;
-            default: return false;
-        }
-    }
-    
-    override
-    float getValue(string key) {
-        switch(key) {
-            case "opacity":             return offsetOpacity;
-            case "tint.r":              return offsetTint.x;
-            case "tint.g":              return offsetTint.y;
-            case "tint.b":              return offsetTint.z;
-            case "screenTint.r":        return offsetScreenTint.x;
-            case "screenTint.g":        return offsetScreenTint.y;
-            case "screenTint.b":        return offsetScreenTint.z;
-            case "emissionStrength":    return offsetEmissionStrength;
-            default:                    return super.getValue(key);
+            default:
+                return super.getPropertyDefault(key);
         }
     }
 
     /**
-        Applies an offset to the Node's transform.
+        Sets the value of the property.
 
         Params:
-            other = The transform to offset the current global transform by.
+            key =   The name of the property.
+            value = The value to set the property to.
     */
     override
-    void offsetTransform(Transform other) @nogc {
-        globalTransform = globalTransform.calcOffset(other);
-        globalTransform.update();
+    void setProperty(string key, float value) {
+        switch(key) {
+            case "opacity":
+                offsetOpacity *= value;
+                return;
+            case "tint.r":
+                offsetTint.x *= value;
+                return;
+            case "tint.g":
+                offsetTint.y *= value;
+                return;
+            case "tint.b":
+                offsetTint.z *= value;
+                return;
+            case "screenTint.r":
+                offsetScreenTint.x += value;
+                return;
+            case "screenTint.g":
+                offsetScreenTint.y += value;
+                return;
+            case "screenTint.b":
+                offsetScreenTint.z += value;
+                return;
+            case "emissionStrength":
+                offsetEmissionStrength += value;
+                return;
+            default:
+                return super.setProperty(key, value);
+        }
     }
 }
 mixin Register!(Part, in_node_registry);

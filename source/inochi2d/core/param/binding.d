@@ -1035,21 +1035,21 @@ public:
 
     override
     void applyToTarget(float value) {
-        target.node.setValue(target.paramName, value);
+        target.node.setProperty(target.paramName, value);
     }
 
     override
     void clearValue(ref float val) {
-        val = target.node.getDefaultValue(target.paramName);
+        val = target.node.getPropertyDefault(target.paramName);
     }
 
     override void scaleValueAt(vec2u index, int axis, float scale) {
         /* Nodes know how to do axis-aware scaling */
-        setValue(index, target.node.scaleValue(target.paramName, getValue(index), axis, scale));
+        // setValue(index, target.node.scaleValue(target.paramName, getValue(index), axis, scale));
     }
 
     override bool isCompatibleWithNode(Node other) {
-        return other.hasParam(this.target.paramName);
+        return other.hasProperty(this.target.paramName);
     }
 }
 

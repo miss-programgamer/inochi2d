@@ -545,7 +545,7 @@ public:
         this.resort();
 
         foreach(visual; visuals_) {
-            if (!visual.renderEnabled) 
+            if (!visual.enabled) 
                 continue;
             
             visual.draw(delta, drawList_);

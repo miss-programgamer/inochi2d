@@ -429,7 +429,7 @@ public:
 
     void updateInputs() {
         auto anchorPos = localOnly ? 
-            (vec4(transformLocal.translation, 1)) : 
+            (vec4(localTransform.translation, 1)) : 
             (transform.matrix * vec4(0, 0, 0, 1));
         anchor = vec2(anchorPos.x, anchorPos.y);
     }
@@ -497,8 +497,19 @@ public:
         }
     }
 
+    /**
+        Gets whether a property with the given name exists
+        in the object.
+
+        Params:
+            key = The name of the property.
+        
+        Returns:
+            $(D true) if the property exists,
+            $(D false) otherwise.
+    */
     override
-    bool hasParam(string key) {
+    bool hasProperty(string key) {
         switch(key) {
             case "gravity":
             case "length":
@@ -509,16 +520,44 @@ public:
             case "outputScale.y":
                 return true;
             default:
-                return super.hasParam(key);
+                return super.hasProperty(key);
+        }
+    }
+    
+    /**
+        Gets the value of a given property.
+
+        Params:
+            key = The name of the property.
+        
+        Returns:
+            The floating point value of the property.
+    */
+    override
+    float getProperty(string key) {
+        switch(key) {
+            case "gravity":         return offsetGravity;
+            case "length":          return offsetLength;
+            case "frequency":       return offsetFrequency;
+            case "angleDamping":    return offsetAngleDamping;
+            case "lengthDamping":   return offsetLengthDamping;
+            case "outputScale.x":   return offsetOutputScale.x;
+            case "outputScale.y":   return offsetOutputScale.y;
+            default:                return super.getProperty(key);
         }
     }
 
-    override
-    float getDefaultValue(string key) {
-        // Skip our list of our parent already handled it
-        float def = super.getDefaultValue(key);
-        if (def.isFinite) return def;
+    /**
+        Gets the default value of a given property.
 
+        Params:
+            key = The name of the property.
+        
+        Returns:
+            The default value of the property.
+    */
+    override
+    float getPropertyDefault(string key) {
         switch(key) {
             case "gravity":
             case "frequency":
@@ -529,53 +568,44 @@ public:
                 return 1;
             case "length":
                 return 0;
-            default: return float();
+            default:
+                return super.getPropertyDefault(key);
         }
     }
 
-    override
-    bool setValue(string key, float value) {
-        
-        // Skip our list of our parent already handled it
-        if (super.setValue(key, value)) return true;
+    /**
+        Sets the value of the property.
 
+        Params:
+            key =   The name of the property.
+            value = The value to set the property to.
+    */
+    override
+    void setProperty(string key, float value) {
         switch(key) {
             case "gravity":
                 offsetGravity *= value;
-                return true;
+                return;
             case "length":
                 offsetLength += value;
-                return true;
+                return;
             case "frequency":
                 offsetFrequency *= value;
-                return true;
+                return;
             case "angleDamping":
                 offsetAngleDamping *= value;
-                return true;
+                return;
             case "lengthDamping":
                 offsetLengthDamping *= value;
-                return true;
+                return;
             case "outputScale.x":
                 offsetOutputScale.x *= value;
-                return true;
+                return;
             case "outputScale.y":
                 offsetOutputScale.y *= value;
-                return true;
-            default: return false;
-        }
-    }
-    
-    override
-    float getValue(string key) {
-        switch(key) {
-            case "gravity":         return offsetGravity;
-            case "length":          return offsetLength;
-            case "frequency":       return offsetFrequency;
-            case "angleDamping":    return offsetAngleDamping;
-            case "lengthDamping":   return offsetLengthDamping;
-            case "outputScale.x":   return offsetOutputScale.x;
-            case "outputScale.y":   return offsetOutputScale.y;
-            default:                return super.getValue(key);
+                return;
+            default:
+                return super.setProperty(key, value);
         }
     }
 }
