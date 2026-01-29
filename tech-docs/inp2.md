@@ -4,6 +4,8 @@ With Inochi2D 0.9 a new file format has been created that aims to be more robust
 ## Format Layout
 The format is a little-endian binary format, aligned to 32 bits, consisting of tagged data nodes.
 
+All INP2 streams begin with the magic bytes `TRNSRTS2` (`0x54524E5352545332`)
+
 Each data node in the INP2 stream are denoted with a tag, which are stored in the lower byte of the tag. Tags must be ANDed with the tag mask `0x000000FF` to get the non-metadata tag. All tags are aligned to 32 bits. This is done by appending null bytes to non-32 bit aligned types or by extending integral types to 32 bits.
 
 Example:  
