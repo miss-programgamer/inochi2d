@@ -22,6 +22,7 @@ public import inochi2d.core.nodes.visual;
 public import inochi2d.core.nodes.part;
 public import inochi2d.core.nodes.animatedpart;
 public import inochi2d.core.registry;
+public import inochi2d.core.property;
 
 import core.attribute : standalone;
 import std.exception;
