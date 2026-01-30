@@ -1,7 +1,7 @@
-module inochi2d.core.nodes.animatedpart;
-import inochi2d.core.nodes.part;
+module inochi2d.nodes.animatedpart;
+import inochi2d.nodes.part;
+import inochi2d.nodes;
 import inochi2d.core;
-import inochi2d.core.math;
 
 
 /**

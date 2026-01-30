@@ -6,10 +6,10 @@
     
     Authors: Luna Nielsen
 */
-module inochi2d.core.animation;
+module inochi2d.animation;
 
-public import inochi2d.core.animation.animation;
+public import inochi2d.animation.animation;
 
-import inochi2d.core.puppet;
+import inochi2d.puppet;
 import inochi2d;
 import inmath;

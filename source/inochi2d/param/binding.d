@@ -6,10 +6,10 @@
     - Luna Nielsen
     - Hoshino Lina
 */
-module inochi2d.core.param.binding;
-import inochi2d.core.serde;
-import inochi2d.core.math;
-import inochi2d.core.sorting;
+module inochi2d.param.binding;
+import inochi2d.param;
+import inochi2d.puppet;
+import inochi2d.nodes;
 import inochi2d.core;
 import nulib.collections;
 import numem;

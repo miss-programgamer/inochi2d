@@ -6,17 +6,16 @@
     - Luna Nielsen
     - Hoshino Lina
 */
-module inochi2d.core.param;
-import inochi2d.core.serde;
-import inochi2d.core.math;
-import inochi2d.core.guid;
-import inochi2d.core.sorting;
+module inochi2d.param;
+import inochi2d.puppet;
+import inochi2d.nodes;
 import inochi2d.core;
+import inochi2d.core.serde;
 import nulib.collections;
 import nulib.string;
 import numem;
 
-public import inochi2d.core.param.binding;
+public import inochi2d.param.binding;
 
 enum ParamMergeMode {
 
@@ -260,7 +259,7 @@ public:
         }
 
         if ("bindings" in object && object["bindings"].isArray) {
-            foreach(DataNode child; object["bindings"].array) {
+            foreach(ref child; object["bindings"].array) {
                 
                 // Skip empty children
                 if (string paramName = child.tryGet!string("param_name", null)) {

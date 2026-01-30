@@ -1,5 +1,6 @@
-module inochi2d.core.animation.animation;
-import inochi2d.core.serde;
+module inochi2d.animation.animation;
+import inochi2d.puppet;
+import inochi2d.param;
 import inochi2d.core;
 import inmath;
 import inmath.interpolate;

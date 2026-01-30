@@ -6,8 +6,8 @@
 
     Authors: Hoshino Lina
 */
-module inochi2d.core.nodes.drivers.simplephysics;
-import inochi2d.core.nodes.drivers;
+module inochi2d.nodes.drivers.simplephysics;
+import inochi2d.nodes.drivers;
 import inochi2d.core.serde;
 import inochi2d.core.guid;
 import inochi2d.core.math;

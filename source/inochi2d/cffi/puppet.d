@@ -9,10 +9,9 @@
 module inochi2d.cffi.puppet;
 import inochi2d.cffi.render;
 import inochi2d.cffi.eh;
-import inochi2d.core.puppet;
-import inochi2d.core.render;
-import inochi2d.core.serde;
-import inochi2d.core.param;
+import inochi2d.puppet;
+import inochi2d.param;
+import inochi2d.core;
 import numem;
 import nulib.string;
 import inochi2d.cffi;

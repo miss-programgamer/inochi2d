@@ -6,10 +6,9 @@
     
     Authors: Luna Nielsen
 */
-module inochi2d.core.nodes.part;
-import inochi2d.core.nodes.visual;
-import inochi2d.core.serde;
-import inochi2d.core.math;
+module inochi2d.nodes.part;
+import inochi2d.nodes.visual;
+import inochi2d.nodes;
 import inochi2d.core;
 import numem;
 

@@ -6,15 +6,15 @@
     
     Authors: Luna Nielsen
 */
-module inochi2d.core.nodes.deformer;
-import inochi2d.core.nodes;
+module inochi2d.nodes.deformer;
+import inochi2d.nodes;
 import inochi2d.core.math;
 import inochi2d.core;
 import nulib;
 import numem;
 
-public import inochi2d.core.nodes.deformer.meshdeformer;
-public import inochi2d.core.nodes.deformer.latticedeformer;
+public import inochi2d.nodes.deformer.meshdeformer;
+public import inochi2d.nodes.deformer.latticedeformer;
 
 /**
     A node which deforms the vertex data of nodes beneath

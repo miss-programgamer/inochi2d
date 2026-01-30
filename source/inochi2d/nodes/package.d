@@ -6,7 +6,7 @@
     
     Authors: Luna Nielsen
 */
-module inochi2d.core.nodes;
+module inochi2d.nodes;
 import inochi2d.core.serde;
 import inochi2d.core.math;
 import inochi2d.core.guid;
@@ -15,14 +15,16 @@ import nulib.string;
 import numem;
 import nulib;
 
-public import inochi2d.core.nodes.composite;
-public import inochi2d.core.nodes.deformer;
-public import inochi2d.core.nodes.drivers; 
-public import inochi2d.core.nodes.visual;
-public import inochi2d.core.nodes.part;
-public import inochi2d.core.nodes.animatedpart;
+public import inochi2d.puppet;
+public import inochi2d.nodes.composite;
+public import inochi2d.nodes.deformer;
+public import inochi2d.nodes.drivers; 
+public import inochi2d.nodes.visual;
+public import inochi2d.nodes.part;
+public import inochi2d.nodes.animatedpart;
 public import inochi2d.core.registry;
 public import inochi2d.core.property;
+public import inochi2d.core.render;
 
 import core.attribute : standalone;
 import std.exception;

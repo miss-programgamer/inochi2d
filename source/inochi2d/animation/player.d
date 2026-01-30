@@ -1,7 +1,7 @@
-module inochi2d.core.animation.player;
-import inochi2d.core.puppet;
-import inochi2d.core.animation;
-import inochi2d.core.param;
+module inochi2d.animation.player;
+import inochi2d.puppet;
+import inochi2d.animation;
+import inochi2d.param;
 import inmath;
 
 class AnimationPlayer {

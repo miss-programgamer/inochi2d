@@ -8,17 +8,14 @@
 */
 module inochi2d.core;
 
-public import inochi2d.core.render;
-public import inochi2d.core.nodes;
-public import inochi2d.core.puppet;
-public import inochi2d.core.mesh;
-public import inochi2d.core.param;
-public import inochi2d.core.animation;
 public import inochi2d.core.serde;
-public import inochi2d.core.phys;
+public import inochi2d.core.render;
+public import inochi2d.core.mesh;
 public import inochi2d.core.guid;
 public import inochi2d.core.math;
-
+public import inochi2d.core.property;
+public import inochi2d.core.sorting;
+public import inochi2d.core.registry;
 
 import inochi2d.core.math;
 import std.stdio;

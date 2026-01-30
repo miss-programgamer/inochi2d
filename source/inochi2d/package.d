@@ -11,5 +11,8 @@
 */
 module inochi2d;
 
-public import inochi2d.core;
+public import inochi2d.puppet;
+public import inochi2d.nodes;
+public import inochi2d.animation;
+public import inochi2d.param;
 public import inochi2d.ver;

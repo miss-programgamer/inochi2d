@@ -6,10 +6,12 @@
 
     Authors: Hoshino Lina
 */
-module inochi2d.core.nodes.drivers;
+module inochi2d.nodes.drivers;
+import inochi2d.nodes;
+import inochi2d.param;
 import inochi2d.core;
 
-public import inochi2d.core.nodes.drivers.simplephysics;
+public import inochi2d.nodes.drivers.simplephysics;
 
 /**
     Driver abstract node type

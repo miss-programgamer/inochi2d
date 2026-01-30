@@ -6,9 +6,9 @@
     
     Authors: Luna Nielsen
 */
-module inochi2d.core.nodes.composite;
-import inochi2d.core.nodes.visual;
-import inochi2d.core.nodes;
+module inochi2d.nodes.composite;
+import inochi2d.nodes.visual;
+import inochi2d.nodes;
 import inochi2d.core.math;
 import inochi2d.core;
 

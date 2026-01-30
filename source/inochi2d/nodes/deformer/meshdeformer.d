@@ -6,13 +6,10 @@
     
     Authors: Luna Nielsen, seagetch
 */
-module inochi2d.core.nodes.deformer.meshdeformer;
-import inochi2d.core.nodes.deformer;
-import inochi2d.core.math;
+module inochi2d.nodes.deformer.meshdeformer;
+import inochi2d.nodes.deformer;
+import inochi2d.nodes;
 import inochi2d.core;
-import std.exception;
-import std.typecons: tuple, Tuple;
-import std.stdio;
 import numem;
 
 /**

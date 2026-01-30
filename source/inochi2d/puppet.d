@@ -6,10 +6,10 @@
     
     Authors: Luna Nielsen
 */
-module inochi2d.core.puppet;
-import inochi2d.core.serde;
-import inochi2d.core.render;
-import inochi2d.core.math;
+module inochi2d.puppet;
+import inochi2d.nodes;
+import inochi2d.param;
+import inochi2d.animation;
 import inochi2d.core;
 import inp.format;
 import std.algorithm.sorting;
