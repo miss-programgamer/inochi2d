@@ -18,7 +18,7 @@ import nulib;
 public import inochi2d.puppet;
 public import inochi2d.nodes.composite;
 public import inochi2d.nodes.deformer;
-public import inochi2d.nodes.drivers; 
+public import inochi2d.nodes.legacy; 
 public import inochi2d.nodes.visual;
 public import inochi2d.nodes.part;
 public import inochi2d.nodes.animatedpart;
@@ -211,14 +211,6 @@ public:
         Visual name of the node
     */
     nstring name = "Unnamed Node";
-
-    /**
-        The local transform.
-    */
-
-    /**
-        The Z-sorting value.
-    */
 
     /**
         The puppet this node is attached to

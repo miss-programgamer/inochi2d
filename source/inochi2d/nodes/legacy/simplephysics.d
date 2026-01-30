@@ -6,8 +6,7 @@
 
     Authors: Hoshino Lina
 */
-module inochi2d.nodes.drivers.simplephysics;
-import inochi2d.nodes.drivers;
+module inochi2d.nodes.legacy.simplephysics;
 import inochi2d.core.serde;
 import inochi2d.core.guid;
 import inochi2d.core.math;
@@ -17,6 +16,9 @@ import numem;
 
 import std.algorithm.sorting;
 import std.exception;
+
+// Allow disabling legacy node.
+version(IN_NO_LEGACY) {} else:
 
 /**
     Physics model to use for simple physics
@@ -174,7 +176,7 @@ public:
     Simple Physics Node
 */
 @TypeId("SimplePhysics", 0x00000103)
-class SimplePhysics : Driver {
+class SimplePhysics : Node {
 private:
     void __tmp__pushToParameter(Parameter param, vec2 paramVal, vec2 oscale) @nogc {
         assumeNoThrowNoGC((Parameter param, vec2 paramVal, vec2 oscale) {
@@ -346,7 +348,6 @@ public:
     /**
         The affected parameters of the driver.
     */
-    override
     @property Parameter[] affectedParameters() @nogc => (&param_)[0..1];
 
     /**
@@ -404,7 +405,26 @@ public:
         this.reset();
     }
 
-    override
+    /**
+        Gets whether the given parameter is affected by
+        this driver.
+
+        Params:
+            param = The parameter to query.
+        
+        Returns:
+            $(D true) if the parameter is affected by 
+            the driver, $(D false) otherwise.
+    */
+    final
+    bool affectsParameter(ref Parameter param) {
+        foreach(ref Parameter p; this.affectedParameters) {
+            if (p.guid == param.guid)
+                return true;
+        } 
+        return false;
+    }
+
     void updateDriver(float delta) {
 
         // Timestep is limited to 10 seconds, as if you
@@ -481,7 +501,6 @@ public:
         __tmp__pushToParameter(param, paramVal, oscale);
     }
 
-    override
     void reset() {
         updateInputs();
 

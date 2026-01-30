@@ -90,9 +90,10 @@ You can pass the following build types to Inochi2D.
 ## Build Options
 Add with `--d-version=`
 
-|             Option | Use                                                                                   |
-| -----------------: | :------------------------------------------------------------------------------------ |
-| `IN_VEC3_POSITION` | Use 3D vectors to store the `POSITION` portion of the vertex data.                    |
+|             Option | Use                                                                |
+| -----------------: | :----------------------------------------------------------------- |
+| `IN_VEC3_POSITION` | Use 3D vectors to store the `POSITION` portion of the vertex data. |
+|     `IN_NO_LEGACY` | Disables legacy features.                                          |
 
 # Inochi2D Technical Documentation
 Technical documentation for Inochi2D is provided in the `tech-docs/` directory, 

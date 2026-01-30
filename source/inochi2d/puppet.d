@@ -18,6 +18,12 @@ import nulib.io.stream;
 import nulib;
 import numem;
 
+// NOTE:    Puppet has some legacy functionality, this allows turning that off.
+version(IN_NO_LEGACY) {} else {
+    pragma(msg, "WARNING: Legacy features are enabled, these may be removed in future updates.");
+    version = IN_LEGACY;
+}
+
 /**
     Magic value meaning that the model has no thumbnail
 */
@@ -113,29 +119,38 @@ private:
     // A list of parts that are not masked by other parts
     Visual[] visuals_;
 
-    // A list of drivers that need to run to update the puppet
-    Driver[] drivers_;
-
     // A list of parameters attached to the puppet.
     vector!Parameter parameters_;
 
     // A dictionary of named animations
     vector!Animation animations_;
 
-    // A list of parameters that are driven by drivers
-    weak_map!(Parameter, Driver) driven_;
-
     // Extended Vendor Data
     weak_map!(string, ubyte[]) vendorData_;
 
+    //
+    //          LEGACY CONSTRUCTS
+    //
+    version(IN_LEGACY) {
+
+        // A list of parameters that are driven by drivers
+        weak_map!(Parameter, SimplePhysics) driven_;
+
+        // A list of drivers that need to run to update the puppet
+        SimplePhysics[] drivers_;
+    }
+
     void scanParts(ref Node node) {
         node.findVisuals(visuals_);
-        node.findNodes!Driver(drivers_);
 
-        driven_.clearContents();
-        foreach(driver; drivers_) {
-            foreach(Parameter param; driver.affectedParameters)
-                driven_[param] = driver;
+        // Legacy physics system.
+        version(IN_LEGACY) {
+            node.findNodes!SimplePhysics(drivers_);
+            driven_.clearContents();
+            foreach(driver; drivers_) {
+                foreach(Parameter param; driver.affectedParameters)
+                    driven_[param] = driver;
+            }
         }
     }
 
@@ -297,7 +312,7 @@ public:
     /**
         Whether drivers should run
     */
-    bool enableDrivers = true;
+    version(IN_LEGACY) bool enableDrivers = true;
 
     /**
         Puppet render transform
@@ -319,7 +334,7 @@ public:
     /**
         A read-only slice of drivers
     */
-    final @property Driver[] drivers() => drivers_;
+    version(IN_LEGACY) final @property SimplePhysics[] drivers() => drivers_;
 
     /**
         A read-only slice of animations attached to this puppet.
@@ -470,23 +485,22 @@ public:
         transform.update();
         root.preUpdate(drawList_);
 
+        // Update parameters
         if (renderParameters) {
-
-            // Update parameters
             foreach(parameter; parameters_) {
-
-                if (!enableDrivers || parameter !in driven_)
-                    parameter.update();
+                parameter.update();
             }
         }
 
         // Ensure the transform tree is updated
         root.notifyTransformChanged();
 
-        if (renderParameters && enableDrivers) {
-            // Update parameter/node driver nodes (e.g. physics)
-            foreach(driver; drivers_) {
-                driver.updateDriver(delta);
+        version(IN_LEGACY) {
+            if (renderParameters && enableDrivers) {
+                // Update parameter/node driver nodes (e.g. physics)
+                foreach(driver; drivers_) {
+                    driver.updateDriver(delta);
+                }
             }
         }
 
@@ -498,7 +512,7 @@ public:
     /**
         Reset drivers/physics nodes
     */
-    final void resetDrivers() @nogc {
+    version(IN_LEGACY) final void resetDrivers() @nogc {
         foreach(driver; drivers_) {
             driver.reset();
         }
