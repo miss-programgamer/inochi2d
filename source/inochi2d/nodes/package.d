@@ -247,12 +247,12 @@ public:
     /**
         Local-space Z-sorting value
     */
-    @property ref float localZSort() => zSort_.base;
+    @property ref float localZSort() @nogc nothrow pure => zSort_.base;
 
     /**
         World-space Z-sorting value
     */
-    @property float zSort() => (parent ? parent.zSort : 0) + zSort_;
+    @property float zSort() @nogc nothrow pure => (parent ? parent.zSort : 0) + zSort_;
 
     /**
         The transform in local-space.
@@ -784,8 +784,8 @@ mixin Register!(Node, in_node_registry);
         recurseDelegates =  Whether to recurse through delegate visuals.
         sort =              Whether to sort the list of visuals.
 */
-void findVisuals(Node root, ref Visual[] list, bool recurseDelegates = false, bool sort = true) @nogc {
-    static void findVisualsImpl(Node node, ref Visual[] list, bool recurseDelegates = false) @nogc {
+void findVisuals(Node root, ref Visual[] list, bool recurseDelegates = false, bool sort = true) @nogc nothrow {
+    static void findVisualsImpl(Node node, ref Visual[] list, bool recurseDelegates = false) @nogc nothrow {
         if (!node)
             return;
 
@@ -811,7 +811,11 @@ void findVisuals(Node root, ref Visual[] list, bool recurseDelegates = false, bo
         }
     }
 
-    nu_freea(list);
+    if (list) {
+        nu_free(list.ptr);
+        list = null;
+    }
+
     findVisualsImpl(root, list, recurseDelegates);
     if (sort)
         sortNodes(list);
@@ -824,8 +828,8 @@ void findVisuals(Node root, ref Visual[] list, bool recurseDelegates = false, bo
         root =  The root node to start searching from.
         list =  The list to write the results to.
 */
-void findNodes(T)(Node root, ref T[] list) @nogc if (is(T : Node)) {
-    static void findNodesImpl(Node node, ref T[] list) @nogc {
+void findNodes(T)(Node root, ref T[] list) @nogc nothrow if (is(T : Node)) {
+    static void findNodesImpl(Node node, ref T[] list) @nogc nothrow {
         if (!node)
             return;
 
@@ -841,7 +845,11 @@ void findNodes(T)(Node root, ref T[] list) @nogc if (is(T : Node)) {
         }
     }
 
-    nu_freea(list);
+    if (list) {
+        nu_free(list.ptr);
+        list = null;
+    }
+
     findNodesImpl(root, list);
 }
 
@@ -851,11 +859,11 @@ void findNodes(T)(Node root, ref T[] list) @nogc if (is(T : Node)) {
     Params:
         slice = The slice to sort.
 */
-void sortNodes(T)(ref T[] slice) @nogc if (is(T : Node)) {
+void sortNodes(T)(ref T[] slice) @nogc nothrow if (is(T : Node)) {
     import inochi2d.core.sorting : in_sort;
     import nulib.math.fixed : fixed32;
 
     // HACK:    nulib doesn't have a float cmp function yet,
     //          as such we convert sorting values to fixed.
-    in_sort!((Visual a, Visual b) => fixed32(a.zSort).data < fixed32(b.zSort).data)(slice);
+    in_sort!((Visual a, Visual b) @nogc => fixed32(a.zSort).data < fixed32(b.zSort).data)(slice);
 }

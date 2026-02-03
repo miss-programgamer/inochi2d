@@ -17,7 +17,7 @@ module inochi2d.core.sorting;
 /**
     Sorts the given range.
 */
-void in_sort(alias pred, R)(R range) @nogc {
+void in_sort(alias pred, R)(R range) @nogc nothrow {
     TimSortImpl!(pred, R).sort(range, null);
 }
 
@@ -28,16 +28,22 @@ void in_sort(alias pred, R)(R range) @nogc {
         range = The range to reverse the contents of.
 */
 pragma(inline, true)
-void in_reverse(T)(T[] range) @nogc {
+void in_reverse(T)(T[] range) @nogc nothrow {
     import numem.core.memory : nu_swap;
+    import numem.core.hooks : nu_memmove;
 
     foreach (i; 0 .. range.length / 2) {
-        nu_swap(range[i], range[range.length - i]);
+        T tmp;
+        T* a = &range[i];
+        T* b = &range[range.length - i];
+        nu_memmove(&tmp, &a, T.sizeof);
+        nu_memmove(&a, &b, T.sizeof);
+        nu_memmove(&b, &tmp, T.sizeof);
     }
 }
 
 private template TimSortImpl(alias pred, R) {
-@nogc:
+@nogc nothrow:
     import numem.core.math : nu_min;
     import numem.core.traits;
     import numem.lifetime;

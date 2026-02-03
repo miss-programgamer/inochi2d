@@ -134,7 +134,7 @@ public:
         Whether the renderer should delegate rendering logic
         to the visual node.
     */
-    @property bool isDelegated() @nogc => false;
+    @property bool isDelegated() @nogc nothrow pure => false;
 
     /// Destructor
     ~this() {
