@@ -17,8 +17,8 @@ import nulib.string;
 import inochi2d.cffi;
 import inmath;
 
-version(IN_DYNLIB):
-extern(C) export @nogc:
+version (IN_DYNLIB) :
+extern (C) export @nogc:
 
 //
 //              PUPPET
@@ -46,7 +46,7 @@ in_puppet_t* in_puppet_load(const(char)* file) {
 
     __in_clear_error();
 
-    string path = cast(string)file[0..nu_strlen(file)];
+    string path = cast(string)file[0 .. nu_strlen(file)];
     return cast(in_puppet_t*)assumeNoGC((string file) {
         try {
             Puppet p = assumeNoGC(&inLoadPuppet!Puppet, file);
@@ -74,7 +74,7 @@ in_puppet_t* in_puppet_load(const(char)* file) {
 */
 in_puppet_t* in_puppet_load_from_memory(const(ubyte)* data, uint length) {
     import core.memory : GC;
-    
+
     __in_clear_error();
 
     return cast(in_puppet_t*)assumeNoGC((ubyte[] buffer) {
@@ -86,7 +86,7 @@ in_puppet_t* in_puppet_load_from_memory(const(ubyte)* data, uint length) {
             __in_set_error(ex);
             return null;
         }
-    }, cast(ubyte[])data[0..length]);
+    }, cast(ubyte[])data[0 .. length]);
 }
 
 /**
@@ -102,6 +102,7 @@ in_puppet_t* in_puppet_load_from_memory(const(ubyte)* data, uint length) {
 */
 void in_puppet_free(in_puppet_t* obj) {
     import core.memory : GC;
+
     if (obj) {
         GC.removeRoot(cast(void*)obj);
         assumeNoGC(&destroy!(false, Puppet), cast(Puppet)obj);
@@ -313,7 +314,7 @@ bool in_parameter_get_active(in_parameter_t* obj) {
         the parameter has.
 */
 uint in_parameter_get_dimensions(in_parameter_t* obj) {
-    return (cast(Parameter)obj).isVec2+1;
+    return (cast(Parameter)obj).isVec2 + 1;
 }
 
 /**

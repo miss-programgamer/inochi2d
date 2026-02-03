@@ -21,7 +21,7 @@ enum TextureFormat : uint {
         None or unknown encoding.
     */
     none = 0,
-    
+
     /**
         RGBA8 data.
     */
@@ -86,7 +86,7 @@ public:
         Width of the texture in pixels.
     */
     final @property uint width() => data.width;
-    
+
     /**
         Height of the texture in pixels.
     */
@@ -146,23 +146,24 @@ public:
         Amount of color channels in the image.
     */
     @property uint channels() {
-        final switch(format) {
-            case TextureFormat.depthStencil:
-                return 4;
+        final switch (format) {
+        case TextureFormat.depthStencil:
+            return 4;
 
-            case TextureFormat.rgba8Unorm:
-                return 4;
+        case TextureFormat.rgba8Unorm:
+            return 4;
 
-            case TextureFormat.r8:
-                return 1;
+        case TextureFormat.r8:
+            return 1;
 
-            case TextureFormat.none:
-                return 0;
+        case TextureFormat.none:
+            return 0;
         }
     }
 
     static TextureData load(ubyte[] data) {
         import nulib.io.stream.memstream : MemoryStream;
+
         return TextureData.load(nogc_new!MemoryStream(data));
     }
 
@@ -174,6 +175,7 @@ public:
     */
     static TextureData load(Stream stream) {
         import imagefmt : IFImage, IFInfo, IF_ERROR, read_image, read_info, ERROR;
+
         ubyte[] tmpbuffer = nu_malloca!ubyte(stream.length);
 
         TextureData result;
@@ -193,7 +195,7 @@ public:
             result.format = info.c == 1 ? TextureFormat.r8 : TextureFormat.rgba8Unorm;
 
             return result;
-        } catch(Exception ex) {
+        } catch (Exception ex) {
             nu_freea(tmpbuffer);
             throw ex;
         }
@@ -203,26 +205,26 @@ public:
         Premultiplies incoming color data.
     */
     void premultiply() {
-        final switch(format) {
-            case TextureFormat.rgba8Unorm:
-                ubyte[] dataView = cast(ubyte[])data;
-                foreach(i; 0..data.length/4) {
-                    size_t offsetPixel = (i*4);
+        final switch (format) {
+        case TextureFormat.rgba8Unorm:
+            ubyte[] dataView = cast(ubyte[])data;
+            foreach (i; 0 .. data.length / 4) {
+                size_t offsetPixel = (i * 4);
 
-                    float r = (cast(float)dataView[offsetPixel+0]/255.0) * (cast(float)dataView[offsetPixel+3]/255.0);
-                    float g = (cast(float)dataView[offsetPixel+1]/255.0) * (cast(float)dataView[offsetPixel+3]/255.0);
-                    float b = (cast(float)dataView[offsetPixel+2]/255.0) * (cast(float)dataView[offsetPixel+3]/255.0);
+                float r = (cast(float)dataView[offsetPixel + 0] / 255.0) * (cast(float)dataView[offsetPixel + 3] / 255.0);
+                float g = (cast(float)dataView[offsetPixel + 1] / 255.0) * (cast(float)dataView[offsetPixel + 3] / 255.0);
+                float b = (cast(float)dataView[offsetPixel + 2] / 255.0) * (cast(float)dataView[offsetPixel + 3] / 255.0);
 
-                    dataView[offsetPixel+0] = cast(ubyte)(r*255.0);
-                    dataView[offsetPixel+1] = cast(ubyte)(g*255.0);
-                    dataView[offsetPixel+2] = cast(ubyte)(b*255.0);
-                }
-                return;
-            
-            case TextureFormat.none:
-            case TextureFormat.depthStencil:
-            case TextureFormat.r8:
-                return;
+                dataView[offsetPixel + 0] = cast(ubyte)(r * 255.0);
+                dataView[offsetPixel + 1] = cast(ubyte)(g * 255.0);
+                dataView[offsetPixel + 2] = cast(ubyte)(b * 255.0);
+            }
+            return;
+
+        case TextureFormat.none:
+        case TextureFormat.depthStencil:
+        case TextureFormat.r8:
+            return;
         }
     }
 
@@ -230,32 +232,32 @@ public:
         Un-premultiplies incoming color data.
     */
     void unpremultiply() {
-        final switch(format) {
-            case TextureFormat.rgba8Unorm:
-                ubyte[] dataView = cast(ubyte[])data;
-                foreach(i; 0..data.length/4) {
+        final switch (format) {
+        case TextureFormat.rgba8Unorm:
+            ubyte[] dataView = cast(ubyte[])data;
+            foreach (i; 0 .. data.length / 4) {
 
-                    size_t offsetPixel = (i*4);
+                size_t offsetPixel = (i * 4);
 
-                    // Ensure no divide by zero happens.
-                    if (cast(float)dataView[offsetPixel+3] == 0) {
-                        dataView[offsetPixel..offsetPixel+3] = 0;
-                        continue;
-                    }
-
-                    float r = (cast(float)dataView[offsetPixel+0]/255.0) / (cast(float)dataView[offsetPixel+3]/255.0);
-                    float g = (cast(float)dataView[offsetPixel+1]/255.0) / (cast(float)dataView[offsetPixel+3]/255.0);
-                    float b = (cast(float)dataView[offsetPixel+2]/255.0) / (cast(float)dataView[offsetPixel+3]/255.0);
-                    dataView[offsetPixel+0] = cast(ubyte)(r*255.0);
-                    dataView[offsetPixel+1] = cast(ubyte)(g*255.0);
-                    dataView[offsetPixel+2] = cast(ubyte)(b*255.0);
+                // Ensure no divide by zero happens.
+                if (cast(float)dataView[offsetPixel + 3] == 0) {
+                    dataView[offsetPixel .. offsetPixel + 3] = 0;
+                    continue;
                 }
-                return;
-            
-            case TextureFormat.none:
-            case TextureFormat.depthStencil:
-            case TextureFormat.r8:
-                return;
+
+                float r = (cast(float)dataView[offsetPixel + 0] / 255.0) / (cast(float)dataView[offsetPixel + 3] / 255.0);
+                float g = (cast(float)dataView[offsetPixel + 1] / 255.0) / (cast(float)dataView[offsetPixel + 3] / 255.0);
+                float b = (cast(float)dataView[offsetPixel + 2] / 255.0) / (cast(float)dataView[offsetPixel + 3] / 255.0);
+                dataView[offsetPixel + 0] = cast(ubyte)(r * 255.0);
+                dataView[offsetPixel + 1] = cast(ubyte)(g * 255.0);
+                dataView[offsetPixel + 2] = cast(ubyte)(b * 255.0);
+            }
+            return;
+
+        case TextureFormat.none:
+        case TextureFormat.depthStencil:
+        case TextureFormat.r8:
+            return;
         }
     }
 
@@ -267,6 +269,7 @@ public:
     */
     void dump(string file) {
         import imagefmt : write_image;
+
         if (data.length > 0) {
             write_image(file, width, height, cast(ubyte[])data, 4);
         }
@@ -282,23 +285,23 @@ public:
         if (data.length == 0)
             return;
 
-        uint totalPad = thickness*2;
-        ubyte[] newData = nu_malloca!ubyte((width+totalPad)*(height+totalPad)*channels);
-        newData[0..$] = 0;
+        uint totalPad = thickness * 2;
+        ubyte[] newData = nu_malloca!ubyte((width + totalPad) * (height + totalPad) * channels);
+        newData[0 .. $] = 0;
 
-        size_t srcStride = width*channels;
-        size_t dstStride = (width+totalPad)*channels;
-        foreach(y; 0..height) {
-            size_t start = (dstStride*(y+thickness))+(thickness*channels);
+        size_t srcStride = width * channels;
+        size_t dstStride = (width + totalPad) * channels;
+        foreach (y; 0 .. height) {
+            size_t start = (dstStride * (y + thickness)) + (thickness * channels);
             size_t end = start + srcStride;
-            newData[start..end] = cast(ubyte[])data[srcStride*y..(srcStride*y)+srcStride];
+            newData[start .. end] = cast(ubyte[])data[srcStride * y .. (srcStride * y) + srcStride];
         }
 
         // Update the texture
         nu_freea(data);
         this.data = newData;
-        this.width = width+totalPad;
-        this.height = height+totalPad;
+        this.width = width + totalPad;
+        this.height = height + totalPad;
     }
 
     /**
@@ -307,15 +310,15 @@ public:
     */
     void resize(uint width, uint height) {
         if (data.length > 0) {
-            void[] newData = nu_malloca!ubyte(width*height*channels);
+            void[] newData = nu_malloca!ubyte(width * height * channels);
 
             // Copy as many horizontal lines as requested
             // into our new buffer.
-            size_t oldStride = this.width*channels;
-            size_t newStride = width*channels;
+            size_t oldStride = this.width * channels;
+            size_t newStride = width * channels;
             size_t cStride = min(oldStride, newStride);
-            foreach(y; 0..min(this.height, height)) {
-                newData[newStride*y..(newStride*y)+newStride] = data[oldStride*y..(oldStride*y)+cStride];
+            foreach (y; 0 .. min(this.height, height)) {
+                newData[newStride * y .. (newStride * y) + newStride] = data[oldStride * y .. (oldStride * y) + cStride];
             }
 
             // Data has been copied over, now replace the old array.
@@ -332,15 +335,15 @@ public:
     */
     void vflip() {
         if (data.length > 0) {
-            size_t stride = width*channels;
+            size_t stride = width * channels;
             void[] tmp = nu_malloca!ubyte(stride);
-            foreach(y; 0..height/2) {
-                void[] top = data[stride*y..(stride*y)+stride];
-                void[] bottom = data[stride*(height-(y+1))..(stride*(height-(y+1)))+stride];
+            foreach (y; 0 .. height / 2) {
+                void[] top = data[stride * y .. (stride * y) + stride];
+                void[] bottom = data[stride * (height - (y + 1)) .. (stride * (height - (y + 1))) + stride];
 
-                tmp[0..stride] = top[0..stride];
-                top[0..stride] = bottom[0..stride];
-                bottom[0..stride] = tmp[0..stride];
+                tmp[0 .. stride] = top[0 .. stride];
+                top[0 .. stride] = bottom[0 .. stride];
+                bottom[0 .. stride] = tmp[0 .. stride];
             }
         }
     }
@@ -368,8 +371,8 @@ private:
 public:
 
     // Destructor
-    ~this() {
-        foreach(ref texture; textures) {
+     ~this() {
+        foreach (ref texture; textures) {
             texture.release();
         }
         nu_freea(textures);
@@ -383,7 +386,7 @@ public:
     /**
         The cached textures.
     */
-    @property Texture[] cache() => textures[0..$];
+    @property Texture[] cache() => textures[0 .. $];
 
     /**
         Adds a texture to the cache, adding a retain count
@@ -399,11 +402,11 @@ public:
     uint add(Texture texture) {
         ptrdiff_t idx = find(texture);
         if (idx == -1) {
-            textures = textures.nu_resize(textures.length+1);
-            textures[$-1] = texture;
+            textures = textures.nu_resize(textures.length + 1);
+            textures[$ - 1] = texture;
             texture.retain();
 
-            return cast(uint)(textures.length-1);
+            return cast(uint)(textures.length - 1);
         }
         return cast(uint)idx;
     }
@@ -416,7 +419,7 @@ public:
     */
     void prune() {
         size_t alive = 0;
-        foreach(i; 0..textures.length) {
+        foreach (i; 0 .. textures.length) {
             if (auto tex = textures[i].released()) {
 
                 // Avoid copy semantics, moving the alive texture
@@ -441,7 +444,7 @@ public:
     Texture get(uint slotId) {
         return slotId >= size ? null : textures[slotId];
     }
-    
+
     /**
         Finds the slot of a given texture within the cache.
 
@@ -453,7 +456,7 @@ public:
             $(D -1) if the texture was not found.
     */
     ptrdiff_t find(Texture texture) {
-        foreach(i; 0..textures.length) {
+        foreach (i; 0 .. textures.length) {
             if (textures[i] is texture)
                 return i;
         }

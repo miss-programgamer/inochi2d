@@ -10,8 +10,8 @@ module inochi2d.cffi.render;
 import inochi2d.core.render;
 import inochi2d.core.mesh;
 
-version(IN_DYNLIB):
-extern(C) export @nogc:
+version (IN_DYNLIB) :
+extern (C) export @nogc:
 
 /**
     2D Vector
@@ -27,7 +27,7 @@ struct in_vec2_t {
 struct in_vtx_t {
     float x;
     float y;
-    version(IN_VEC3_POSITION) float z;
+    version (IN_VEC3_POSITION) float z;
 }
 
 /**
@@ -207,61 +207,58 @@ void* in_texture_get_pixels(in_texture_t* obj) {
     DrawState flags
 */
 alias in_drawstate_t = uint;
-enum in_drawstate_t
-    IN_DRAW_STATE_NORMAL            = 0,
-    IN_DRAW_STATE_DEFINE_MASK       = 1,
-    IN_DRAW_STATE_MASKED_DRAW       = 2,
-    IN_DRAW_STATE_COMPOSITE_BEGIN   = 3,
-    IN_DRAW_STATE_COMPOSITE_END     = 4,
-    IN_DRAW_STATE_COMPOSITE_BLIT    = 5;
+enum in_drawstate_t IN_DRAW_STATE_NORMAL = 0,
+    IN_DRAW_STATE_DEFINE_MASK = 1,
+    IN_DRAW_STATE_MASKED_DRAW = 2,
+    IN_DRAW_STATE_COMPOSITE_BEGIN = 3,
+    IN_DRAW_STATE_COMPOSITE_END = 4,
+    IN_DRAW_STATE_COMPOSITE_BLIT = 5;
 
 /**
     Masking modes
 */
 alias in_mask_mode_t = uint;
-enum in_mask_mode_t
-    IN_MASK_MODE_MASK   = 0,
-    IN_MASK_MODE_DODGE  = 1;
+enum in_mask_mode_t IN_MASK_MODE_MASK = 0,
+    IN_MASK_MODE_DODGE = 1;
 
 /**
     Blending modes
 */
 alias in_blend_mode_t = uint;
-enum in_blend_mode_t
-    IN_BLEND_MODE_NORMAL            = 0x00,
-    IN_BLEND_MODE_MULTIPLY          = 0x01,
-    IN_BLEND_MODE_SCREEN            = 0x02,
-    IN_BLEND_MODE_OVERLAY           = 0x03,
-    IN_BLEND_MODE_DARKEN            = 0x04,
-    IN_BLEND_MODE_LIGHTEN           = 0x05,
-    IN_BLEND_MODE_COLOR_DODGE       = 0x06,
-    IN_BLEND_MODE_LINEAR_DODGE      = 0x07,
-    IN_BLEND_MODE_ADD_GLOW          = 0x08,
-    IN_BLEND_MODE_COLOR_BURN        = 0x09,
-    IN_BLEND_MODE_HARD_LIGHT        = 0x0A,
-    IN_BLEND_MODE_SOFT_LIGHT        = 0x0B,
-    IN_BLEND_MODE_DIFFERENCE        = 0x0C,
-    IN_BLEND_MODE_EXCLUSION         = 0x0D,
-    IN_BLEND_MODE_SUBTRACT          = 0x0E,
-    IN_BLEND_MODE_INVERSE           = 0x0F,
-    IN_BLEND_MODE_DESTINATION_IN    = 0x10,
-    IN_BLEND_MODE_SOURCE_IN         = 0x11,
-    IN_BLEND_MODE_SOURCE_OUT        = 0x12;
+enum in_blend_mode_t IN_BLEND_MODE_NORMAL = 0x00,
+    IN_BLEND_MODE_MULTIPLY = 0x01,
+    IN_BLEND_MODE_SCREEN = 0x02,
+    IN_BLEND_MODE_OVERLAY = 0x03,
+    IN_BLEND_MODE_DARKEN = 0x04,
+    IN_BLEND_MODE_LIGHTEN = 0x05,
+    IN_BLEND_MODE_COLOR_DODGE = 0x06,
+    IN_BLEND_MODE_LINEAR_DODGE = 0x07,
+    IN_BLEND_MODE_ADD_GLOW = 0x08,
+    IN_BLEND_MODE_COLOR_BURN = 0x09,
+    IN_BLEND_MODE_HARD_LIGHT = 0x0A,
+    IN_BLEND_MODE_SOFT_LIGHT = 0x0B,
+    IN_BLEND_MODE_DIFFERENCE = 0x0C,
+    IN_BLEND_MODE_EXCLUSION = 0x0D,
+    IN_BLEND_MODE_SUBTRACT = 0x0E,
+    IN_BLEND_MODE_INVERSE = 0x0F,
+    IN_BLEND_MODE_DESTINATION_IN = 0x10,
+    IN_BLEND_MODE_SOURCE_IN = 0x11,
+    IN_BLEND_MODE_SOURCE_OUT = 0x12;
 
 /**
     A drawing command from the Inochi2D draw list
 */
 struct in_drawcmd_t {
-    in_texture_t*[IN_MAX_ATTACHMENTS]   sources;
-    in_drawstate_t                      state;
-    in_blend_mode_t                     blendMode;
-    in_mask_mode_t                      maskMode;
-    uint                                allocId;
-    uint                                vtxOffset;
-    uint                                idxOffset;
-    uint                                elemCount;
-    uint                                type;
-    void[64]                            vars;
+    in_texture_t*[IN_MAX_ATTACHMENTS] sources;
+    in_drawstate_t state;
+    in_blend_mode_t blendMode;
+    in_mask_mode_t maskMode;
+    uint allocId;
+    uint vtxOffset;
+    uint idxOffset;
+    uint elemCount;
+    uint type;
+    void[64] vars;
 }
 
 /**
@@ -337,7 +334,7 @@ in_drawcmd_t* in_drawlist_get_commands(in_drawlist_t* obj, ref uint count) {
         A pointer to the data
 */
 in_vtxdata_t* in_drawlist_get_vertex_data(in_drawlist_t* obj, ref uint bytes) {
-    bytes = cast(uint)((cast(DrawList)obj).vertices.length*VtxData.sizeof);
+    bytes = cast(uint)((cast(DrawList)obj).vertices.length * VtxData.sizeof);
     return cast(in_vtxdata_t*)(cast(DrawList)obj).vertices.ptr;
 }
 
@@ -355,7 +352,7 @@ in_vtxdata_t* in_drawlist_get_vertex_data(in_drawlist_t* obj, ref uint bytes) {
         A pointer to the data
 */
 void* in_drawlist_get_index_data(in_drawlist_t* obj, ref uint bytes) {
-    bytes = cast(uint)((cast(DrawList)obj).indices.length*uint.sizeof);
+    bytes = cast(uint)((cast(DrawList)obj).indices.length * uint.sizeof);
     return cast(void*)(cast(DrawList)obj).indices.ptr;
 }
 

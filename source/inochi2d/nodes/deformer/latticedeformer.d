@@ -32,13 +32,13 @@ private:
     void regenLattice() {
         if (subdivs == 0)
             return;
-        
-        this.latticeInitial = latticeInitial.nu_resize(subdivs*subdivs);
+
+        this.latticeInitial = latticeInitial.nu_resize(subdivs * subdivs);
         this.lattice = lattice.nu_resize(latticeInitial.length);
-        latticeInitial[0..$] = vec2.zero;
+        latticeInitial[0 .. $] = vec2.zero;
 
         vec2 iter = vec2(size_.x / subdivs, size_.y / subdivs);
-        foreach(i; 0..lattice.length) {
+        foreach (i; 0 .. lattice.length) {
             float x = mod(cast(float)i, cast(float)subdivs);
             float y = cast(float)i / cast(float)subdivs;
             latticeInitial[i] = iter * vec2(x, y);
@@ -47,7 +47,7 @@ private:
 
     // Clears lattice weights
     void clearWeights() {
-        foreach(i; 0..weights_.length) {
+        foreach (i; 0 .. weights_.length) {
             nu_freea(weights_[i]);
         }
         nu_freea(weights_);
@@ -63,7 +63,7 @@ protected:
             recursive = Whether to recurse through children.
     */
     override
-    void onSerialize(ref DataNode object, bool recursive=true) {
+    void onSerialize(ref DataNode object, bool recursive = true) {
         super.onSerialize(object, recursive);
         object["subdivisions"] = subdivs.serialize();
     }
@@ -134,7 +134,7 @@ public:
         import nulib.math : min;
 
         size_t m = min(value.length, lattice.length);
-        lattice[0..m] = value[0..m];
+        lattice[0 .. m] = value[0 .. m];
     }
 
     /**
@@ -162,7 +162,7 @@ public:
     */
     override
     void resetDeform() {
-        lattice[0..$] = latticeInitial[0..$];
+        lattice[0 .. $] = latticeInitial[0 .. $];
     }
 
     /**
@@ -184,7 +184,7 @@ public:
         //     weights_[i] = nu_malloca!float(mesh.deformPoints.length);
         //     if (mesh.deformPoints.length > mLatticeSpace.length)
         //         mLatticeSpace = mLatticeSpace.nu_resize(mesh.deformPoints.length);
-            
+
         //     mLatticeSpace[0..mesh.deformPoints.length] = mesh.deformPoints[0..$];
         //     foreach(j; 0..mesh.deformPoints.length) {
         //         mLatticeSpace[j] = vec2(
@@ -192,9 +192,8 @@ public:
         //             (deformPoints[j].y - area.left) / area.height,
         //         );
         //     }
-            
-        //     foreach(j; 0..mesh.deformPoints.length) {
 
+        //     foreach(j; 0..mesh.deformPoints.length) {
 
         //         // 
         //     }
@@ -202,4 +201,5 @@ public:
         // nu_freea(mLatticeSpace);
     }
 }
+
 mixin Register!(LatticeDeformer, in_node_registry);

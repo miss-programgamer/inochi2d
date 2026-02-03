@@ -27,18 +27,18 @@ mat4 mulm4m4(mat4 a, mat4 b) @nogc nothrow pure {
     __m128 row2 = _mm_loadu_ps(&a.matrix[1][0]);
     __m128 row3 = _mm_loadu_ps(&a.matrix[2][0]);
     __m128 row4 = _mm_loadu_ps(&a.matrix[3][0]);
-    foreach(i; 0..4) {
+    foreach (i; 0 .. 4) {
         __m128 brod1 = _mm_set1_ps(b.matrix[i][0]);
         __m128 brod2 = _mm_set1_ps(b.matrix[i][1]);
         __m128 brod3 = _mm_set1_ps(b.matrix[i][2]);
         __m128 brod4 = _mm_set1_ps(b.matrix[i][3]);
         __m128 row = _mm_add_ps(
-                    _mm_add_ps(
-                        _mm_mul_ps(brod1, row1),
-                        _mm_mul_ps(brod2, row2)),
-                    _mm_add_ps(
-                        _mm_mul_ps(brod3, row3),
-                        _mm_mul_ps(brod4, row4)));
+                _mm_add_ps(
+                _mm_mul_ps(brod1, row1),
+                _mm_mul_ps(brod2, row2)),
+                _mm_add_ps(
+                _mm_mul_ps(brod3, row3),
+                _mm_mul_ps(brod4, row4)));
         _mm_store_ps(&c.matrix[i][0], row);
     }
     return c;
@@ -59,10 +59,10 @@ mat4 mulm4m4(mat4 a, mat4 b) @nogc nothrow pure {
 */
 VecT mulvm4(VecT)(VecT a, mat4 b) @nogc nothrow pure if (isVector!VecT) {
     __m128 vec = _mm_set_ps(1, 0, 0, 0);
-    vec[0..VecT.dimension] = a.vector[0..$];
-    
+    vec[0 .. VecT.dimension] = a.vector[0 .. $];
+
     __m128 result;
-    foreach(row; 0..4) {
+    foreach (row; 0 .. 4) {
 
         __m128 acc = _mm_setzero_ps();
         __m128 mat = _mm_loadu_ps(&b.matrix[row][0]);

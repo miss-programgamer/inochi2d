@@ -17,9 +17,9 @@ import nulib;
     A UDA applied to types in Inochi2D to allow them to be instantiated
     using an object model. Types both may have a string and numeric ID.
 */
-struct TypeId { 
-    string  sid; 
-    uint    nid;
+struct TypeId {
+    string sid;
+    uint nid;
 
     enum nil = TypeId(null, uint.max);
 }
@@ -35,6 +35,7 @@ struct TypeIdAbstract;
 */
 mixin template Register(T, alias registry) {
     import numem.core.traits : hasUDA;
+
     static if (hasUDA!(T, TypeId)) {
         pragma(msg, "Registering ", T.stringof, " in ", registry.stringof, "...");
 
@@ -49,18 +50,16 @@ mixin template Register(T, alias registry) {
 */
 struct TypeRegistry(T) {
 private:
+    // dfmt off
     alias __TypeMap(Key, Value) = MapImpl!(Key, Value, (a, b) => a < b, false, false);
-    static X __construct(X)() @nogc {
-        return assumeNoGC(() {
-            return new(nu_mallocT!X()) X();
-        });
-    }
+    static X __construct(X)() @nogc { return assumeNoGC(() { return new(nu_mallocT!X()) X(); }); }
+    // dfmt on
 
 @nogc:
     alias factory_t = T function();
-    __TypeMap!(void*,     TypeId)      typeIdStore;
-    __TypeMap!(string, factory_t)    factoryStoreS;
-    __TypeMap!(uint,   factory_t)    factoryStoreN;
+    __TypeMap!(void*, TypeId) typeIdStore;
+    __TypeMap!(string, factory_t) factoryStoreS;
+    __TypeMap!(uint, factory_t) factoryStoreN;
 
 public:
 
@@ -72,7 +71,8 @@ public:
     */
     void register(X)() {
         import numem.core.traits : getUDAs, hasUDA;
-        static assert(hasUDA!(X, TypeId), X.stringof~" does not have a TypeId UDA!");
+
+        static assert(hasUDA!(X, TypeId), X.stringof ~ " does not have a TypeId UDA!");
 
         alias _tids = getUDAs!(X, TypeId);
         typeIdStore[cast(void*)typeid(X)] = _tids[0];

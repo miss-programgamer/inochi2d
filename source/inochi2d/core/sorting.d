@@ -120,7 +120,7 @@ private template TimSortImpl(alias pred, R) {
                 immutable run1 = stackLen - 4;
 
                 if ((stackLen > 2 && stack[run2].length <= stack[run3].length + stack[run4].length) ||
-                    (stackLen > 3 && stack[run1].length <= stack[run3].length + stack[run2].length)) {
+                        (stackLen > 3 && stack[run1].length <= stack[run3].length + stack[run2].length)) {
                     immutable at = stack[run2].length < stack[run4].length ? run2 : run3;
                     mergeAt(range, stack[0 .. stackLen], at, minGallop, temp);
                 } else if (stack[run3].length > stack[run4].length)
@@ -154,7 +154,8 @@ private template TimSortImpl(alias pred, R) {
 
     int bsr(T)(T v) {
         import ldc.intrinsics : llvm_ctlz;
-        return cast(int) (typeof(v).sizeof * 8 - 1 - llvm_ctlz(v, true));
+
+        return cast(int)(typeof(v).sizeof * 8 - 1 - llvm_ctlz(v, true));
     }
 
     // Returns length of first run in range

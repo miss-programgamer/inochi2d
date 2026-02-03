@@ -21,8 +21,8 @@ interface IDeserializable {
     Whether type T can be deserialized.
 */
 enum isDeserializable(T) =
-    is(T : IDeserializable) || 
-    is(typeof((ref DataNode obj) { T a; a.onDeserialize(obj); })) || 
+    is(T : IDeserializable) ||
+    is(typeof((ref DataNode obj) { T a; a.onDeserialize(obj); })) ||
     is(typeof((ref DataNode obj) { T a; onDeserialize!T(a, obj); }));
 
 /**
@@ -35,10 +35,10 @@ enum isDeserializable(T) =
     Returns:
         The deserialized vector
 */
-void onDeserialize(T)(ref T dst, ref DataNode value) @nogc
-if (isVector!T) {
-    foreach(i, element; value.array) {
-        if (i >= T.dimension) break;
+void onDeserialize(T)(ref T dst, ref DataNode value) @nogc if (isVector!T) {
+    foreach (i, element; value.array) {
+        if (i >= T.dimension)
+            break;
         dst.vector[i] = element.get!(T.vt);
     }
 }
@@ -46,9 +46,9 @@ if (isVector!T) {
 /**
     Array deserializer.
 */
-void onDeserialize(T)(ref T dst, ref DataNode object) @nogc
-if (isArray!T) {
+void onDeserialize(T)(ref T dst, ref DataNode object) @nogc if (isArray!T) {
     import std.range : ElementType;
+
     alias ET = ElementType!T;
 
     if (object.isJsonArray) {
@@ -56,11 +56,11 @@ if (isArray!T) {
             float[] tmp = object.tryGet!(float[])();
             size_t dim = ET.dimension;
 
-            dst.length = tmp.length/dim;
-            foreach(i; 0..dst.length) {
-                size_t s = i*dim;
-                size_t e = s+dim;
-                dst[i].vector[0..dim] = tmp[s..e];
+            dst.length = tmp.length / dim;
+            foreach (i; 0 .. dst.length) {
+                size_t s = i * dim;
+                size_t e = s + dim;
+                dst[i].vector[0 .. dim] = tmp[s .. e];
             }
         } else static if (__traits(isScalar, ET)) {
 
@@ -77,12 +77,12 @@ if (isArray!T) {
             DataNode[] arr = object.arrayNoRef;
             static if (isDynamicArray!T)
                 dst = new ET[arr.length];
-            
-            foreach(i; 0..arr.length) {
+
+            foreach (i; 0 .. arr.length) {
                 static if (isStaticArray!T)
                     if (i >= dst.length)
                         break;
-                
+
                 dst[i] = cast(ET)arr[i].get!FT();
             }
 
@@ -92,12 +92,12 @@ if (isArray!T) {
 
                 static if (isDynamicArray!T)
                     dst.length = arr.length;
-                
-                foreach(i, ref DataNode value; arr) {
+
+                foreach (i, ref DataNode value; arr) {
                     static if (isStaticArray!T)
                         if (i >= dst.length)
                             break;
-                    
+
                     static if (isArray!ET) {
                         value.deserialize(dst[i]);
                     } else static if (isDeserializable!ET) {

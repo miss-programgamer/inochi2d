@@ -18,7 +18,7 @@ import nulib;
 public import inochi2d.puppet;
 public import inochi2d.nodes.composite;
 public import inochi2d.nodes.deformer;
-public import inochi2d.nodes.legacy; 
+public import inochi2d.nodes.legacy;
 public import inochi2d.nodes.visual;
 public import inochi2d.nodes.part;
 public import inochi2d.nodes.animatedpart;
@@ -107,7 +107,7 @@ protected:
         // Recurse through children if enabled.
         if (recursive) {
             object["children"] = DataNode.createArray();
-            foreach(child; children) {
+            foreach (child; children) {
                 auto childObject = DataNode.createObject();
                 child.serialize(childObject);
 
@@ -133,8 +133,8 @@ protected:
 
         // Pre-populate our children with the correct types
         if ("children" in object && object["children"].isArray) {
-            foreach(ref child; object["children"].array) {
-                
+            foreach (ref child; object["children"].array) {
+
                 // Fetch type from json
                 if (string type = child.tryGet!string("type", null)) {
 
@@ -160,7 +160,7 @@ protected:
     */
     void onFinalize() @nogc {
         nid_ = typeId.nid;
-        foreach(child; children) {
+        foreach (child; children) {
             child.onFinalize();
         }
     }
@@ -171,7 +171,8 @@ protected:
         Params:
             drawList =  The drawlist for the active scene.
     */
-    void onPreUpdate(DrawList drawList) @nogc { }
+    void onPreUpdate(DrawList drawList) @nogc {
+    }
 
     /**
         Called during the update phase of a new frame.
@@ -180,7 +181,8 @@ protected:
             delta =     Time since the last frame.
             drawList =  The drawlist for the active scene.
     */
-    void onUpdate(float delta, DrawList drawList) @nogc { }
+    void onUpdate(float delta, DrawList drawList) @nogc {
+    }
 
     /**
         Called during the late update phase of a new frame.
@@ -188,7 +190,8 @@ protected:
         Params:
             drawList =  The drawlist for the active scene.
     */
-    void onPostUpdate(DrawList drawList) @nogc { }
+    void onPostUpdate(DrawList drawList) @nogc {
+    }
 
     /**
         Called when the node is to be redrawn.
@@ -198,7 +201,8 @@ protected:
             drawList =  The drawlist for the active scene.
             mode =      The masking mode to draw with.
     */
-    void onDraw(float delta, DrawList drawList, MaskingMode mode = MaskingMode.none) @nogc { }
+    void onDraw(float delta, DrawList drawList, MaskingMode mode = MaskingMode.none) @nogc {
+    }
 
 public:
 
@@ -249,7 +253,7 @@ public:
         World-space Z-sorting value
     */
     @property float zSort() => (parent ? parent.zSort : 0) + zSort_;
-    
+
     /**
         The transform in local-space.
     */
@@ -260,15 +264,16 @@ public:
     */
     @property Transform transformNoLock() @nogc {
         localTransform_.base.update();
-        
-        if (parent !is null) return localTransform_.base * parent.transform();
+
+        if (parent !is null)
+            return localTransform_.base * parent.transform();
         return localTransform_.base;
     }
 
     /**
         The transform in world space
     */
-    @property Transform transform(bool ignoreParams=false)() @nogc {
+    @property Transform transform(bool ignoreParams = false)() @nogc {
         this.recalculateTransforms();
         static if (ignoreParams)
             return globalTransformNoParam_;
@@ -284,7 +289,7 @@ public:
         if (value && !lockToRoot_) {
             localTransform_.base.translation = this.transformNoLock.translation;
         } else if (!value && lockToRoot_) {
-            localTransform_.base.translation = localTransform_.base.translation-parent.transformNoLock.translation;
+            localTransform_.base.translation = localTransform_.base.translation - parent.transformNoLock.translation;
         }
 
         lockToRoot_ = value;
@@ -296,7 +301,7 @@ public:
     final @property int depth() {
         int depthV;
         Node parent = this;
-        while(parent !is null) {
+        while (parent !is null) {
             depthV++;
             parent = parent.parent;
         }
@@ -305,7 +310,7 @@ public:
 
     /// Destructor
     ~this() {
-        foreach(child; children_) {
+        foreach (child; children_) {
             child.release();
         }
         children_.clear();
@@ -350,7 +355,7 @@ public:
     */
     final void notifyTransformChanged() @nogc nothrow {
         recalculateTransform_ = true;
-        foreach(child; children) {
+        foreach (child; children) {
             child.notifyTransformChanged();
         }
     }
@@ -364,7 +369,7 @@ public:
     */
     void setRelativeTo(Node to) {
         setRelativeTo(to.transformNoLock.matrix);
-        this.localZSort = this.localZSort-to.localZSort;
+        this.localZSort = this.localZSort - to.localZSort;
     }
 
     /**
@@ -383,7 +388,7 @@ public:
         Removes all children from this node
     */
     final void clearChildren() {
-        foreach(child; children_) {
+        foreach (child; children_) {
             child.parent_ = null;
         }
         this.children_.clear();
@@ -419,7 +424,7 @@ public:
     */
     final ptrdiff_t getIndexInNode(Node node) {
         if (node) {
-            foreach(i, ref child; node.children_) {
+            foreach (i, ref child; node.children_) {
                 if (child is this)
                     return i;
             }
@@ -431,7 +436,7 @@ public:
     enum OFFSET_END = size_t.max;
     final void insertInto(Node node, size_t offset) @nogc {
         nodePath_ = null;
-        
+
         // Remove ourselves from our current parent if we are
         // the child of one already.
         if (parent_ !is null) {
@@ -467,9 +472,10 @@ public:
     */
     bool canReparent(Node to) {
         Node tmp = to;
-        while(tmp !is null) {
-            if (tmp.guid == this.guid) return false;
-            
+        while (tmp !is null) {
+            if (tmp.guid == this.guid)
+                return false;
+
             // Check next up
             tmp = tmp.parent;
         }
@@ -548,13 +554,14 @@ public:
             controlling rendering.
     */
     final void preUpdate(DrawList drawList) @nogc {
-        if (!enabled) return;
+        if (!enabled)
+            return;
 
         localTransform_.offset.clear();
         zSort_.offset = 0;
 
         this.onPreUpdate(drawList);
-        foreach(child; children_) {
+        foreach (child; children_) {
             child.preUpdate(drawList);
         }
     }
@@ -572,10 +579,11 @@ public:
             controlling rendering.
     */
     final void update(float delta, DrawList drawList) @nogc {
-        if (!enabled) return;
+        if (!enabled)
+            return;
 
         this.onUpdate(delta, drawList);
-        foreach(child; children) {
+        foreach (child; children) {
             child.update(delta, drawList);
         }
     }
@@ -592,10 +600,11 @@ public:
             controlling rendering.
     */
     final void postUpdate(DrawList drawList) @nogc {
-        if (!enabled) return;
+        if (!enabled)
+            return;
 
         this.onPostUpdate(drawList);
-        foreach(child; children_) {
+        foreach (child; children_) {
             child.postUpdate(drawList);
         }
     }
@@ -628,19 +637,19 @@ public:
             $(D false) otherwise.
     */
     bool hasProperty(string key) @nogc nothrow {
-        switch(key) {
-            case "zSort":
-            case "transform.t.x":
-            case "transform.t.y":
-            case "transform.t.z":
-            case "transform.r.x":
-            case "transform.r.y":
-            case "transform.r.z":
-            case "transform.s.x":
-            case "transform.s.y":
-                return true;
-            default:
-                return false;
+        switch (key) {
+        case "zSort":
+        case "transform.t.x":
+        case "transform.t.y":
+        case "transform.t.z":
+        case "transform.r.x":
+        case "transform.r.y":
+        case "transform.r.z":
+        case "transform.s.x":
+        case "transform.s.y":
+            return true;
+        default:
+            return false;
         }
     }
 
@@ -654,17 +663,27 @@ public:
             The floating point value of the property.
     */
     float getProperty(string key) @nogc nothrow {
-        switch(key) {
-            case "zSort":           return zSort_.offset;
-            case "transform.t.x":   return localTransform_.offset.translation.x;
-            case "transform.t.y":   return localTransform_.offset.translation.y;
-            case "transform.t.z":   return localTransform_.offset.translation.z;
-            case "transform.r.x":   return localTransform_.offset.rotation.x;
-            case "transform.r.y":   return localTransform_.offset.rotation.y;
-            case "transform.r.z":   return localTransform_.offset.rotation.z;
-            case "transform.s.x":   return localTransform_.offset.scale.x;
-            case "transform.s.y":   return localTransform_.offset.scale.y;
-            default:                return 0;
+        switch (key) {
+        case "zSort":
+            return zSort_.offset;
+        case "transform.t.x":
+            return localTransform_.offset.translation.x;
+        case "transform.t.y":
+            return localTransform_.offset.translation.y;
+        case "transform.t.z":
+            return localTransform_.offset.translation.z;
+        case "transform.r.x":
+            return localTransform_.offset.rotation.x;
+        case "transform.r.y":
+            return localTransform_.offset.rotation.y;
+        case "transform.r.z":
+            return localTransform_.offset.rotation.z;
+        case "transform.s.x":
+            return localTransform_.offset.scale.x;
+        case "transform.s.y":
+            return localTransform_.offset.scale.y;
+        default:
+            return 0;
         }
     }
 
@@ -678,20 +697,20 @@ public:
             The default value of the property.
     */
     float getPropertyDefault(string key) @nogc nothrow {
-        switch(key) {
-            case "zSort":
-            case "transform.t.x":
-            case "transform.t.y":
-            case "transform.t.z":
-            case "transform.r.x":
-            case "transform.r.y":
-            case "transform.r.z":
-                return 0;
-            case "transform.s.x":
-            case "transform.s.y":
-                return 1;
-            default:
-                return 0;
+        switch (key) {
+        case "zSort":
+        case "transform.t.x":
+        case "transform.t.y":
+        case "transform.t.z":
+        case "transform.r.x":
+        case "transform.r.y":
+        case "transform.r.z":
+            return 0;
+        case "transform.s.x":
+        case "transform.s.y":
+            return 1;
+        default:
+            return 0;
         }
     }
 
@@ -703,44 +722,44 @@ public:
             value = The value to set the property to.
     */
     void setProperty(string key, float value) @nogc nothrow {
-        switch(key) {
-            case "zSort":
-                zSort_.offset += value;
-                return;
-            case "transform.t.x":
-                localTransform_.offset.translation.x += value;
-                this.notifyTransformChanged();
-                return;
-            case "transform.t.y":
-                localTransform_.offset.translation.y += value;
-                this.notifyTransformChanged();
-                return;
-            case "transform.t.z":
-                localTransform_.offset.translation.z += value;
-                this.notifyTransformChanged();
-                return;
-            case "transform.r.x":
-                localTransform_.offset.rotation.x += value;
-                this.notifyTransformChanged();
-                return;
-            case "transform.r.y":
-                localTransform_.offset.rotation.y += value;
-                this.notifyTransformChanged();
-                return;
-            case "transform.r.z":
-                localTransform_.offset.rotation.z += value;
-                this.notifyTransformChanged();
-                return;
-            case "transform.s.x":
-                localTransform_.offset.scale.x *= value;
-                this.notifyTransformChanged();
-                return;
-            case "transform.s.y":
-                localTransform_.offset.scale.y *= value;
-                this.notifyTransformChanged();
-                return;
-            default:
-                return;
+        switch (key) {
+        case "zSort":
+            zSort_.offset += value;
+            return;
+        case "transform.t.x":
+            localTransform_.offset.translation.x += value;
+            this.notifyTransformChanged();
+            return;
+        case "transform.t.y":
+            localTransform_.offset.translation.y += value;
+            this.notifyTransformChanged();
+            return;
+        case "transform.t.z":
+            localTransform_.offset.translation.z += value;
+            this.notifyTransformChanged();
+            return;
+        case "transform.r.x":
+            localTransform_.offset.rotation.x += value;
+            this.notifyTransformChanged();
+            return;
+        case "transform.r.y":
+            localTransform_.offset.rotation.y += value;
+            this.notifyTransformChanged();
+            return;
+        case "transform.r.z":
+            localTransform_.offset.rotation.z += value;
+            this.notifyTransformChanged();
+            return;
+        case "transform.s.x":
+            localTransform_.offset.scale.x *= value;
+            this.notifyTransformChanged();
+            return;
+        case "transform.s.y":
+            localTransform_.offset.scale.y *= value;
+            this.notifyTransformChanged();
+            return;
+        default:
+            return;
         }
     }
 
@@ -752,8 +771,8 @@ public:
         return name[];
     }
 }
-mixin Register!(Node, in_node_registry);
 
+mixin Register!(Node, in_node_registry);
 
 /**
     Finds visuals that are within the hirearchy of the given node.
@@ -765,19 +784,20 @@ mixin Register!(Node, in_node_registry);
         recurseDelegates =  Whether to recurse through delegate visuals.
         sort =              Whether to sort the list of visuals.
 */
-void findVisuals(Node root, ref Visual[] list, bool recurseDelegates=false, bool sort = true) @nogc {
-    static void findVisualsImpl(Node node, ref Visual[] list, bool recurseDelegates=false) @nogc {
-        if (!node) return;
-        
+void findVisuals(Node root, ref Visual[] list, bool recurseDelegates = false, bool sort = true) @nogc {
+    static void findVisualsImpl(Node node, ref Visual[] list, bool recurseDelegates = false) @nogc {
+        if (!node)
+            return;
+
         if (auto visual = cast(Visual)node) {
             if (!visual.enabled)
                 return;
-            
-            list = list.nu_resize(list.length+1);
-            list[$-1] = visual;
+
+            list = list.nu_resize(list.length + 1);
+            list[$ - 1] = visual;
 
             if (!visual.isDelegated || recurseDelegates) {
-                foreach(child; node.children) {
+                foreach (child; node.children) {
                     findVisualsImpl(child, list, recurseDelegates);
                 }
             }
@@ -785,7 +805,7 @@ void findVisuals(Node root, ref Visual[] list, bool recurseDelegates=false, bool
 
             // Non-part nodes just need to be recursed through,
             // they don't draw anything.
-            foreach(child; node.children) {
+            foreach (child; node.children) {
                 findVisualsImpl(child, list, recurseDelegates);
             }
         }
@@ -793,7 +813,8 @@ void findVisuals(Node root, ref Visual[] list, bool recurseDelegates=false, bool
 
     nu_freea(list);
     findVisualsImpl(root, list, recurseDelegates);
-    if (sort) sortNodes(list);
+    if (sort)
+        sortNodes(list);
 }
 
 /**
@@ -803,19 +824,19 @@ void findVisuals(Node root, ref Visual[] list, bool recurseDelegates=false, bool
         root =  The root node to start searching from.
         list =  The list to write the results to.
 */
-void findNodes(T)(Node root, ref T[] list) @nogc 
-if (is(T : Node)) {
+void findNodes(T)(Node root, ref T[] list) @nogc if (is(T : Node)) {
     static void findNodesImpl(Node node, ref T[] list) @nogc {
-        if (!node) return;
-        
+        if (!node)
+            return;
+
         if (auto found = cast(T)node) {
-            list = list.nu_resize(list.length+1);
-            list[$-1] = found;
+            list = list.nu_resize(list.length + 1);
+            list[$ - 1] = found;
         }
 
         // Non-part nodes just need to be recursed through,
         // they don't draw anything.
-        foreach(child; node.children) {
+        foreach (child; node.children) {
             findNodesImpl(child, list);
         }
     }
@@ -830,8 +851,7 @@ if (is(T : Node)) {
     Params:
         slice = The slice to sort.
 */
-void sortNodes(T)(ref T[] slice) @nogc
-if (is(T : Node)) {
+void sortNodes(T)(ref T[] slice) @nogc if (is(T : Node)) {
     import inochi2d.core.sorting : in_sort;
     import nulib.math.fixed : fixed32;
 

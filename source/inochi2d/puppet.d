@@ -19,7 +19,8 @@ import nulib;
 import numem;
 
 // NOTE:    Puppet has some legacy functionality, this allows turning that off.
-version(IN_NO_LEGACY) {} else {
+version (IN_NO_LEGACY) {
+} else {
     pragma(msg, "WARNING: Legacy features are enabled, these may be removed in future updates.");
     version = IN_LEGACY;
 }
@@ -59,7 +60,7 @@ public:
         Pixels-per-meter for the physics system
     */
     float physicsPixelsPerMeter = 1000;
-    
+
     /**
         Gravity for the physics system
     */
@@ -77,7 +78,7 @@ public:
     this(Puppet puppet) @nogc {
         this.parent = puppet;
     }
-    
+
     /**
         Serializes the type.
     */
@@ -88,7 +89,6 @@ public:
         object["author"] = author[];
         object["thumbnail"] = parent.textureCache.find(thumbnail);
 
-
         // Physics properties.
         object["physicsPixelsPerMeter"] = physicsPixelsPerMeter;
         object["physicsGravity"] = physicsGravity;
@@ -96,7 +96,7 @@ public:
         // Graphics properties
         object["graphicsUsePointFiltering"] = graphicsUsePointFiltering;
     }
-    
+
     /**
         Deserializes the type.
     */
@@ -131,7 +131,7 @@ private:
     //
     //          LEGACY CONSTRUCTS
     //
-    version(IN_LEGACY) {
+    version (IN_LEGACY) {
 
         // A list of parameters that are driven by drivers
         weak_map!(Parameter, SimplePhysics) driven_;
@@ -144,11 +144,11 @@ private:
         node.findVisuals(visuals_);
 
         // Legacy physics system.
-        version(IN_LEGACY) {
+        version (IN_LEGACY) {
             node.findNodes!SimplePhysics(drivers_);
             driven_.clearContents();
-            foreach(driver; drivers_) {
-                foreach(Parameter param; driver.affectedParameters)
+            foreach (driver; drivers_) {
+                foreach (Parameter param; driver.affectedParameters)
                     driven_[param] = driver;
             }
         }
@@ -161,11 +161,13 @@ private:
     Node findNode(Node n, string name) @nogc {
 
         // Name matches!
-        if (n.name == name) return n;
+        if (n.name == name)
+            return n;
 
         // Recurse through children
-        foreach(child; n.children) {
-            if (Node c = findNode(child, name)) return c;
+        foreach (child; n.children) {
+            if (Node c = findNode(child, name))
+                return c;
         }
 
         // Not found
@@ -175,11 +177,13 @@ private:
     Node findNode(Node n, GUID guid) @nogc {
 
         // Name matches!
-        if (n.guid == guid) return n;
+        if (n.guid == guid)
+            return n;
 
         // Recurse through children
-        foreach(child; n.children) {
-            if (Node c = findNode(child, guid)) return c;
+        foreach (child; n.children) {
+            if (Node c = findNode(child, guid))
+                return c;
         }
 
         // Not found
@@ -191,41 +195,40 @@ private:
         assert(textureCache !is null, "Texture cache is invalid!");
         assert(node.isArray, "Not a texture cache array!");
 
-        texLoadLoop: foreach(i, ref DataNode texture; node.array) {
+        texLoadLoop: foreach (i, ref DataNode texture; node.array) {
             TextureData textureData;
-            
+
             // Skip invalid texture indices.
             if (!texture.isObject || "encoding" !in texture || "data" !in texture)
                 continue;
-            
+
             uint encoding = texture["encoding"].tryCoerce!int(-1);
             ubyte[] data = texture["data"].blob;
-            
+
             // Invalid data?
             if (encoding == -1 || data.length == 0)
                 continue;
-            
-            // Handle different encodings.
-            switch(encoding) {
-                case INP_TEX_FMT_PNG:
-                case INP_TEX_FMT_TGA:
-                    textureData = TextureData.load(data);
-                    break;
 
-                case INP_TEX_FMT_BC7:
-                    assert(0, "BC7 not implemented yet!");
-                    continue texLoadLoop;
-                
-                default:
-                    // Unknown format.
-                    continue texLoadLoop;
+            // Handle different encodings.
+            switch (encoding) {
+            case INP_TEX_FMT_PNG:
+            case INP_TEX_FMT_TGA:
+                textureData = TextureData.load(data);
+                break;
+
+            case INP_TEX_FMT_BC7:
+                assert(0, "BC7 not implemented yet!");
+                continue texLoadLoop;
+
+            default:
+                // Unknown format.
+                continue texLoadLoop;
             }
             textureCache.add(Texture.createForData(textureData.move()));
         }
     }
 
 protected:
-
 
     /**
         Serializes a puppet into an existing object.
@@ -243,13 +246,13 @@ protected:
         Deserializes a puppet
     */
     void onDeserialize(ref DataNode object) @nogc {
-        
+
         // Invalid type.
         if (!object.isObject)
             return;
 
         // Just set to basic initialized object if none was found.
-        object.tryGetRef(properties, "properties", properties); 
+        object.tryGetRef(properties, "properties", properties);
 
         // Legacy "meta" key.
         if ("meta" in object) {
@@ -273,10 +276,10 @@ protected:
 
         // Finally update link etc.
         this.root.finalize();
-        foreach(parameter; parameters_) {
+        foreach (parameter; parameters_) {
             parameter.finalize(this);
         }
-        foreach(ref animation; animations_) {
+        foreach (ref animation; animations_) {
             animation.finalize(this);
         }
         this.scanParts(this.root);
@@ -312,7 +315,7 @@ public:
     /**
         Whether drivers should run
     */
-    version(IN_LEGACY) bool enableDrivers = true;
+    version (IN_LEGACY) bool enableDrivers = true;
 
     /**
         Puppet render transform
@@ -334,7 +337,7 @@ public:
     /**
         A read-only slice of drivers
     */
-    version(IN_LEGACY) final @property SimplePhysics[] drivers() => drivers_;
+    version (IN_LEGACY) final @property SimplePhysics[] drivers() => drivers_;
 
     /**
         A read-only slice of animations attached to this puppet.
@@ -380,7 +383,8 @@ public:
         this(null, root);
     }
 
-    version(WebAssembly) { } else {
+    version (WebAssembly) {
+    } else {
 
         /**
             Loads a $(D Puppet) from a file.
@@ -410,7 +414,7 @@ public:
     static Result!Puppet fromStream(Stream stream) @nogc {
         assert(stream);
         assert(stream.canRead);
-        
+
         auto result = stream.readINP();
         if (!result)
             return error!Puppet(result.error);
@@ -418,7 +422,7 @@ public:
         DataNode node = result.get();
         if (INP_TAG_PAYLOAD !in node)
             return error!Puppet("No payload was found in the model!");
-        
+
         // Create new puppet and deserialize the data.
         Puppet puppet = nogc_new!Puppet(nogc_new!TextureCache());
         puppet.deserialize(node);
@@ -472,7 +476,7 @@ public:
         //          3. Finalize any data.
         if (INP_TAG_TEXTURES in node)
             this.loadTextures(node[INP_TAG_TEXTURES]);
-        
+
         this.onDeserialize(node[INP_TAG_PAYLOAD]);
         this.onFinalize();
     }
@@ -487,7 +491,7 @@ public:
 
         // Update parameters
         if (renderParameters) {
-            foreach(parameter; parameters_) {
+            foreach (parameter; parameters_) {
                 parameter.update();
             }
         }
@@ -495,10 +499,10 @@ public:
         // Ensure the transform tree is updated
         root.notifyTransformChanged();
 
-        version(IN_LEGACY) {
+        version (IN_LEGACY) {
             if (renderParameters && enableDrivers) {
                 // Update parameter/node driver nodes (e.g. physics)
-                foreach(driver; drivers_) {
+                foreach (driver; drivers_) {
                     driver.updateDriver(delta);
                 }
             }
@@ -512,8 +516,8 @@ public:
     /**
         Reset drivers/physics nodes
     */
-    version(IN_LEGACY) final void resetDrivers() @nogc {
-        foreach(driver; drivers_) {
+    version (IN_LEGACY) final void resetDrivers() @nogc {
+        foreach (driver; drivers_) {
             driver.reset();
         }
     }
@@ -522,7 +526,7 @@ public:
         Returns the index of a parameter by name
     */
     ptrdiff_t findParameterIndex(string name) @nogc {
-        foreach(i, parameter; parameters_) {
+        foreach (i, parameter; parameters_) {
             if (parameter.name == name) {
                 return i;
             }
@@ -534,7 +538,7 @@ public:
         Returns a parameter by GUID
     */
     Parameter findParameter(GUID guid) @nogc {
-        foreach(i, parameter; parameters_) {
+        foreach (i, parameter; parameters_) {
             if (parameter.guid == guid) {
                 return parameter;
             }
@@ -546,8 +550,9 @@ public:
         Gets if a node is bound to ANY parameter.
     */
     bool getIsNodeBound(Node n) {
-        foreach(i, parameter; parameters_) {
-            if (parameter.hasAnyBinding(n)) return true;
+        foreach (i, parameter; parameters_) {
+            if (parameter.hasAnyBinding(n))
+                return true;
         }
         return false;
     }
@@ -558,10 +563,10 @@ public:
     final void draw(float delta) {
         this.resort();
 
-        foreach(visual; visuals_) {
-            if (!visual.enabled) 
+        foreach (visual; visuals_) {
+            if (!visual.enabled)
                 continue;
-            
+
             visual.draw(delta, drawList_);
         }
     }
@@ -630,7 +635,7 @@ public:
     /**
         Gets the combined bounds of the puppet
     */
-    vec4 getCombinedBounds(bool reupdate=false)() {
+    vec4 getCombinedBounds(bool reupdate = false)() {
         return root.getCombinedBounds!(reupdate, true);
     }
 }

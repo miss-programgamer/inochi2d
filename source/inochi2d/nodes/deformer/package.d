@@ -33,16 +33,17 @@ private:
     void scanPartsRecurse(Node node) {
 
         // Don't need to scan null nodes
-        if (node is null) return;
+        if (node is null)
+            return;
 
         // Do the main check
         if (IDeformable deformable = cast(IDeformable)node)
             toDeform_ ~= deformable;
-        
+
         // Deformers already deform their children, and we deform
         // them first, so don't exaggerate it through their children
         if (!cast(Deformer)node) {
-            foreach(child; node.children) {
+            foreach (child; node.children) {
                 this.scanPartsRecurse(child);
             }
         }
@@ -58,7 +59,7 @@ protected:
             recursive = Whether to recurse through children.
     */
     override
-    void onSerialize(ref DataNode object, bool recursive=true) {
+    void onSerialize(ref DataNode object, bool recursive = true) {
         super.onSerialize(object, recursive);
     }
 
@@ -84,7 +85,8 @@ protected:
 
 public:
 
-    ~this() { }
+     ~this() {
+    }
 
     /**
         Constructs a new MeshGroup node
@@ -96,7 +98,7 @@ public:
     /**
         A list of the nodes to deform.
     */
-    @property IDeformable[] toDeform() => toDeform_[0..$];
+    @property IDeformable[] toDeform() => toDeform_[0 .. $];
 
     /**
         The control points of the deformer.
@@ -134,14 +136,14 @@ public:
     */
     override void deform(vec2[] deformed, bool absolute) {
         import nulib.math : min;
-        
+
         size_t m = min(deformPoints.length, deformed.length);
         if (absolute)
-            deformPoints[0..m] = deformed[0..m];
+            deformPoints[0 .. m] = deformed[0 .. m];
         else
-            deformPoints[0..m] += deformed[0..m];
+            deformPoints[0 .. m] += deformed[0 .. m];
     }
-    
+
     /**
         Deforms a single vertex in the IDeformable
 
@@ -154,7 +156,7 @@ public:
     override void deform(size_t offset, vec2 deform, bool absolute = false) {
         if (offset >= deformPoints.length)
             return;
-        
+
         if (absolute)
             deformPoints[offset] = deform;
         else
@@ -182,9 +184,10 @@ public:
     */
     void rescan() {
         toDeform_.clear();
-        foreach(child; children) {
+        foreach (child; children) {
             this.scanPartsRecurse(child);
         }
     }
 }
+
 mixin Register!(Deformer, in_node_registry);

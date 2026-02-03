@@ -18,7 +18,7 @@ import numem;
     A target to bind to
 */
 struct BindTarget {
-    
+
     /**
         The node to bind to
     */
@@ -185,18 +185,18 @@ private:
     // Helper that allocates a 2D array.
     static T[][] malloca_2d(T)(size_t width, size_t height) {
         T[][] result = nu_malloca!(T[])(height);
-        foreach(ref vy; result)
+        foreach (ref vy; result)
             vy = nu_malloca!T(width);
         return result;
     }
 
     // Helper that frees a 2D array.
     static void free_2d(T)(ref T[][] arr) {
-        foreach(x; 0..arr.length)
+        foreach (x; 0 .. arr.length)
             nu_freea(arr[x]);
         nu_freea(arr);
     }
-    
+
 public:
 
     /**
@@ -356,7 +356,7 @@ public:
 
         foreach (x; 0 .. xCount) {
             isSet_[x] = isSet_[x].nu_resize(yCount);
-            isSet_[x][0..$] = false;
+            isSet_[x][0 .. $] = false;
 
             values[x] = values[x].nu_resize(yCount);
             foreach (y; 0 .. yCount) {
@@ -456,7 +456,7 @@ public:
 
         // Initialize validity map to user-set points
         foreach (x; 0 .. xCount) {
-            valid[x][0..yCount] = isSet_[x][0..yCount];
+            valid[x][0 .. yCount] = isSet_[x][0 .. yCount];
             foreach (y; 0 .. yCount) {
                 if (isSet_[x][y])
                     validCount++;
@@ -728,7 +728,7 @@ public:
 
             // Reset the newlySet array
             foreach (x; 0 .. xCount) {
-                newlySet[x][0..$] = bool.init;
+                newlySet[x][0 .. $] = bool.init;
             }
 
             // Try 1D interpolation in the X-Major direction
@@ -817,8 +817,8 @@ public:
 
             size_t xlen = values.length - 1;
             size_t ylen = values[0].length - 1;
-            ptrdiff_t xkp = cast(ptrdiff_t) leftKeypoint.x;
-            ptrdiff_t ykp = cast(ptrdiff_t) leftKeypoint.y;
+            ptrdiff_t xkp = cast(ptrdiff_t)leftKeypoint.x;
+            ptrdiff_t ykp = cast(ptrdiff_t)leftKeypoint.y;
 
             foreach (y; 0 .. 4) {
                 size_t yp = clamp(ykp + y - 1, 0, ylen);
@@ -836,7 +836,7 @@ public:
         if (parameter.isVec2) {
             return bicubicInterp(leftKeypoint, offset.x, offset.y);
         } else {
-            ptrdiff_t xkp = cast(ptrdiff_t) leftKeypoint.x;
+            ptrdiff_t xkp = cast(ptrdiff_t)leftKeypoint.x;
             size_t xlen = values.length - 1;
 
             p0 = values[max(xkp - 1, 0)][0];
@@ -860,27 +860,27 @@ public:
             uint yCount = parameter.axisPointCount(1);
 
             // Extend arrays.
-            values = values.nu_resize(values.length+1);
-            isSet_ = isSet_.nu_resize(isSet_.length+1);
+            values = values.nu_resize(values.length + 1);
+            isSet_ = isSet_.nu_resize(isSet_.length + 1);
 
             // Shift arrays.
-            nu_memmove(values.ptr+index+1, values.ptr+index, values.length-index);
-            nu_memmove(isSet_.ptr+index+1, isSet_.ptr+index, isSet_.length-index);
+            nu_memmove(values.ptr + index + 1, values.ptr + index, values.length - index);
+            nu_memmove(isSet_.ptr + index + 1, isSet_.ptr + index, isSet_.length - index);
 
             // Allocate sub-arrays.
             values[index] = nu_malloca!T(yCount);
             isSet_[index] = nu_malloca!bool(yCount);
         } else if (axis == 1) {
             uint xCount = parameter.axisPointCount(0);
-            foreach(x; 0..xCount) {
+            foreach (x; 0 .. xCount) {
 
                 // Extend arrays.
-                values[x] = values[x].nu_resize(values[x].length+1);
-                isSet_[x] = isSet_[x].nu_resize(isSet_[x].length+1);
+                values[x] = values[x].nu_resize(values[x].length + 1);
+                isSet_[x] = isSet_[x].nu_resize(isSet_[x].length + 1);
 
                 // Shift arrays.
-                nu_memmove(values[x].ptr+index+1, values[x].ptr+index, values[x].length-index);
-                nu_memmove(isSet_[x].ptr+index+1, isSet_[x].ptr+index, isSet_[x].length-index);
+                nu_memmove(values[x].ptr + index + 1, values[x].ptr + index, values[x].length - index);
+                nu_memmove(isSet_[x].ptr + index + 1, isSet_[x].ptr + index, isSet_[x].length - index);
 
                 values[x][index] = T.init;
                 isSet_[x][index] = false;
@@ -900,7 +900,7 @@ public:
 
         } else if (axis == 1) {
             uint xCount = parameter.axisPointCount(0);
-            foreach(x; 0..xCount) {
+            foreach (x; 0 .. xCount) {
                 nu_swap(values[x][oldindex], values[x][newindex]);
                 nu_swap(isSet_[x][oldindex], isSet_[x][newindex]);
             }
@@ -916,23 +916,23 @@ public:
         if (axis == 0) {
 
             // Shift arrays.
-            nu_memmove(values.ptr+index, values.ptr+index+1, values.length-index);
-            nu_memmove(isSet_.ptr+index, isSet_.ptr+index+1, isSet_.length-index);
-            
+            nu_memmove(values.ptr + index, values.ptr + index + 1, values.length - index);
+            nu_memmove(isSet_.ptr + index, isSet_.ptr + index + 1, isSet_.length - index);
+
             // Shrink arrays.
-            values = values.nu_resize(values.length-1);
-            isSet_ = isSet_.nu_resize(isSet_.length-1);
+            values = values.nu_resize(values.length - 1);
+            isSet_ = isSet_.nu_resize(isSet_.length - 1);
         } else if (axis == 1) {
             uint xCount = parameter.axisPointCount(0);
-            foreach(x; 0..xCount) {
+            foreach (x; 0 .. xCount) {
 
                 // Shift arrays.
-                nu_memmove(values[x].ptr+index, values[x].ptr+index+1, values[x].length-index);
-                nu_memmove(isSet_[x].ptr+index, isSet_[x].ptr+index+1, isSet_[x].length-index);
-                
+                nu_memmove(values[x].ptr + index, values[x].ptr + index + 1, values[x].length - index);
+                nu_memmove(isSet_[x].ptr + index, isSet_[x].ptr + index + 1, isSet_[x].length - index);
+
                 // Shrink arrays.
-                values[x] = values[x].nu_resize(values[x].length-1);
-                isSet_[x] = isSet_[x].nu_resize(isSet_[x].length-1);
+                values[x] = values[x].nu_resize(values[x].length - 1);
+                isSet_[x] = isSet_[x].nu_resize(isSet_[x].length - 1);
             }
         }
 
@@ -1074,7 +1074,7 @@ public:
     void applyToTarget(Deformation value) {
         assert(this.target.paramName == "deform");
 
-        if (IDeformable df = cast(IDeformable) target.node) {
+        if (IDeformable df = cast(IDeformable)target.node) {
             df.deform(value.vertexOffsets, false);
         }
     }
@@ -1082,7 +1082,7 @@ public:
     override
     void clearValue(ref Deformation val) {
         // Reset deformation to identity, with the right vertex count
-        if (IDeformable df = cast(IDeformable) target.node) {
+        if (IDeformable df = cast(IDeformable)target.node) {
             val.clear(df.deformPoints.length);
         }
     }
@@ -1110,8 +1110,8 @@ public:
     }
 
     override bool isCompatibleWithNode(Node other) {
-        if (IDeformable a = cast(IDeformable) target.node) {
-            if (IDeformable b = cast(IDeformable) other) {
+        if (IDeformable a = cast(IDeformable)target.node) {
+            if (IDeformable b = cast(IDeformable)other) {
                 return a.deformPoints.length == a.deformPoints.length;
             } else {
                 return false;
@@ -1125,6 +1125,7 @@ public:
 @("TestInterpolation")
 unittest {
     import std.stdio;
+
     void printArray(float[][] arr) {
         foreach (row; arr) {
             writefln(" %s", row);
@@ -1192,127 +1193,127 @@ unittest {
     float x = float.init;
 
     runTestUniform(
-        [[1f], [x], [x], [4f]],
-        [[1f], [2f], [3f], [4f]],
-        "1d-uniform-interpolation"
+            [[1f], [x], [x], [4f]],
+            [[1f], [2f], [3f], [4f]],
+            "1d-uniform-interpolation"
     );
 
     runTest(
-        [[0f], [x], [x], [4f]],
-        [[0f], [1f], [3f], [4f]],
-        [[0f, 0.25f, 0.75f, 1f], [0f]],
-        "1d-nonuniform-interpolation"
+            [[0f], [x], [x], [4f]],
+            [[0f], [1f], [3f], [4f]],
+            [[0f, 0.25f, 0.75f, 1f], [0f]],
+            "1d-nonuniform-interpolation"
     );
 
     runTestUniform(
-        [
+            [
         [4, x, x, 10],
         [x, x, x, x],
         [x, x, x, x],
         [1, x, x, 7]
     ],
-        [
+            [
         [4, 6, 8, 10],
         [3, 5, 7, 9],
         [2, 4, 6, 8],
         [1, 3, 5, 7]
     ],
-        "square-interpolation"
+            "square-interpolation"
     );
 
     runTestUniform(
-        [
+            [
         [4, x, x, x],
         [x, x, x, x],
         [x, x, x, x],
         [1, x, x, 7]
     ],
-        [
+            [
         [4, 6, 8, 10],
         [3, 5, 7, 9],
         [2, 4, 6, 8],
         [1, 3, 5, 7]
     ],
-        "corner-extrapolation"
+            "corner-extrapolation"
     );
 
     runTestUniform(
-        [
+            [
         [9, x, x, 0],
         [x, x, x, x],
         [x, x, x, x],
         [0, x, x, 9]
     ],
-        [
+            [
         [9, 6, 3, 0],
         [6, 5, 4, 3],
         [3, 4, 5, 6],
         [0, 3, 6, 9]
     ],
-        "cross-interpolation"
+            "cross-interpolation"
     );
 
     runTestUniform(
-        [
+            [
         [x, x, 2, x, x],
         [x, x, x, x, x],
         [0, x, x, x, 4],
         [x, x, x, x, x],
         [x, x, 10, x, x]
     ],
-        [
+            [
         [-2, 0, 2, 2, 2],
         [-1, 1, 3, 3, 3],
         [0, 2, 4, 4, 4],
         [3, 5, 7, 7, 7],
         [6, 8, 10, 10, 10]
     ],
-        "diamond-interpolation"
+            "diamond-interpolation"
     );
 
     runTestUniform(
-        [
+            [
         [x, x, x, x],
         [x, 3, 4, x],
         [x, 1, 2, x],
         [x, x, x, x]
     ],
-        [
+            [
         [3, 3, 4, 4],
         [3, 3, 4, 4],
         [1, 1, 2, 2],
         [1, 1, 2, 2]
     ],
-        "edge-expansion"
+            "edge-expansion"
     );
 
     runTestUniform(
-        [
+            [
         [x, x, x, x],
         [x, x, 4, x],
         [x, x, x, x],
         [0, x, x, x]
     ],
-        [
+            [
         [2, 3, 4, 4],
         [2, 3, 4, 4],
         [1, 2, 3, 3],
         [0, 1, 2, 2]
     ],
-        "intersecting-expansion"
+            "intersecting-expansion"
     );
 
     runTestUniform(
-        [
+            [
         [x, 5, x],
         [x, x, x],
         [0, x, x]
     ],
-        [
+            [
         [4, 5, 5],
         [2, 3, 3],
         [0, 1, 1]
     ],
-        "nondiagonal-gradient"
+            "nondiagonal-gradient"
     );
 }

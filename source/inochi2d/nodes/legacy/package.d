@@ -11,6 +11,7 @@
 module inochi2d.nodes.legacy;
 
 // Allow disabling legacy nodes.
-version(IN_NO_LEGACY) {} else:
+version (IN_NO_LEGACY) {
+} else:
 
-public import inochi2d.nodes.legacy.simplephysics;
+    public import inochi2d.nodes.legacy.simplephysics;

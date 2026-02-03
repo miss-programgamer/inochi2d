@@ -22,57 +22,57 @@ enum ParamMergeMode {
     /**
         Parameters are merged additively
     */
-    additive        = 0x00,
+    additive = 0x00,
 
     /**
         Parameters are merged with a weighted average
     */
-    weighted        = 0x01,
+    weighted = 0x01,
 
     /**
         Parameters are merged multiplicatively
     */
-    multiplicative  = 0x02,
+    multiplicative = 0x02,
 
     /**
         Forces parameter to be given value
     */
-    forced          = 0x03,
+    forced = 0x03,
 
     /**
         Merge mode is passthrough
     */
-    passthrough     = 0x04,
+    passthrough = 0x04,
 }
 
 /**
     Gets a parameter merge mode from its string name
 */
 ParamMergeMode toMergeMode(string value) @nogc {
-    switch(value) {
+    switch (value) {
 
-        case "additive":
-        case "Additive":
-            return ParamMergeMode.additive;
+    case "additive":
+    case "Additive":
+        return ParamMergeMode.additive;
 
-        case "weighted":
-        case "Weighted":
-            return ParamMergeMode.weighted;
+    case "weighted":
+    case "Weighted":
+        return ParamMergeMode.weighted;
 
-        case "multiplicative":
-        case "Multiplicative":
-            return ParamMergeMode.multiplicative;
+    case "multiplicative":
+    case "Multiplicative":
+        return ParamMergeMode.multiplicative;
 
-        case "forced":
-        case "Forced":
-            return ParamMergeMode.forced;
+    case "forced":
+    case "Forced":
+        return ParamMergeMode.forced;
 
-        case "passthrough":
-        case "Passthrough":
-            return ParamMergeMode.passthrough;
-        
-        default:
-            return ParamMergeMode.passthrough;
+    case "passthrough":
+    case "Passthrough":
+        return ParamMergeMode.passthrough;
+
+    default:
+        return ParamMergeMode.passthrough;
     }
 }
 
@@ -150,13 +150,13 @@ public:
     @property vec2 normalizedValue() @nogc => this.mapValue(value);
     @property void normalizedValue(vec2 value) @nogc {
         this.value = vec2(
-            value.x * (max.x-min.x) + min.x,
-            value.y * (max.y-min.y) + min.y
+                value.x * (max.x - min.x) + min.x,
+                value.y * (max.y - min.y) + min.y
         );
     }
 
     ~this() {
-        static foreach(axis; 0..axisPoints.length) {
+        static foreach (axis; 0 .. axisPoints.length) {
             axisPoints[axis].clear();
         }
     }
@@ -165,7 +165,7 @@ public:
         For serialization
     */
     this() {
-        static foreach(axis; 0..axisPoints.length) {
+        static foreach (axis; 0 .. axisPoints.length) {
             this.axisPoints[axis].resize(2);
             this.axisPoints[axis][0] = 0;
             this.axisPoints[axis][1] = 1;
@@ -192,15 +192,15 @@ public:
         newParam.max = max;
         newParam.axisPoints = axisPoints.nu_dup;
 
-        foreach(binding; bindings) {
+        foreach (binding; bindings) {
             ParameterBinding newBinding = newParam.createBinding(
-                binding.getNode(),
-                binding.getName(),
-                false
+                    binding.getNode(),
+                    binding.getName(),
+                    false
             );
             newBinding.interpolateMode = binding.interpolateMode;
-            foreach(x; 0..axisPointCount(0)) {
-                foreach(y; 0..axisPointCount(1)) {
+            foreach (x; 0 .. axisPointCount(0)) {
+                foreach (y; 0 .. axisPointCount(1)) {
                     binding.copyKeypointToBinding(vec2u(x, y), newBinding, vec2u(x, y));
                 }
             }
@@ -214,7 +214,7 @@ public:
         Serializes a parameter
     */
     void onSerialize(ref DataNode object, bool recursive = true) {
-        
+
         auto selfGuid = guid.toString();
         object["guid"] = selfGuid[];
         object["name"] = name[];
@@ -227,7 +227,7 @@ public:
         object["merge_mode"] = cast(uint)mergeMode;
 
         object["bindings"] = DataNode.createArray();
-        foreach(ref binding; bindings) {
+        foreach (ref binding; bindings) {
             auto bindingNode = DataNode.createObject();
             binding.onSerialize(bindingNode);
 
@@ -249,18 +249,18 @@ public:
         mergeMode = object.tryGet!string("merge_mode").toMergeMode();
 
         if ("axis_points" in object && object["axis_points"].array) {
-            foreach(i, ref axis; object["axis_points"].array) {
+            foreach (i, ref axis; object["axis_points"].array) {
                 if (i > axisPoints.length)
                     break;
-                
+
                 this.axisPoints[i].resize(axis.length);
-                axis.deserialize(axisPoints[i][0..axis.length]);
+                axis.deserialize(axisPoints[i][0 .. axis.length]);
             }
         }
 
         if ("bindings" in object && object["bindings"].isArray) {
-            foreach(ref child; object["bindings"].array) {
-                
+            foreach (ref child; object["bindings"].array) {
+
                 // Skip empty children
                 if (string paramName = child.tryGet!string("param_name", null)) {
 
@@ -283,7 +283,7 @@ public:
     */
     void finalize(Puppet puppet) {
         this.value = defaults;
-        foreach_reverse(i; 0..bindings.length) {
+        foreach_reverse (i; 0 .. bindings.length) {
             if (puppet.find!Node(bindings[i].getNodeGUID())) {
                 bindings[i].finalize(puppet);
                 continue;
@@ -297,7 +297,7 @@ public:
         void interpAxis(uint axis, float val, out uint index, out float offset) {
             float[] pos = axisPoints[axis];
 
-            foreach(i; 0..pos.length - 1) {
+            foreach (i; 0 .. pos.length - 1) {
                 if (pos[i + 1] > val || i == (pos.length - 2)) {
                     index = cast(uint)i;
                     offset = (val - pos[i]) / (pos[i + 1] - pos[i]);
@@ -307,7 +307,8 @@ public:
         }
 
         interpAxis(0, offset.x, index.x, outOffset.x);
-        if (isVec2) interpAxis(1, offset.y, index.y, outOffset.y);
+        if (isVec2)
+            interpAxis(1, offset.y, index.y, outOffset.y);
     }
 
     void update() {
@@ -318,16 +319,16 @@ public:
             return;
 
         findOffset(this.mapValue(value), index, offset_);
-        foreach(binding; bindings) {
+        foreach (binding; bindings) {
             binding.apply(index, offset_);
         }
     }
 
-    void pushIOffset(vec2 offset, ParamMergeMode mode = ParamMergeMode.passthrough, float weight=1) {
+    void pushIOffset(vec2 offset, ParamMergeMode mode = ParamMergeMode.passthrough, float weight = 1) {
         this.value = offset;
     }
 
-    void pushIOffsetAxis(int axis, float offset, ParamMergeMode mode = ParamMergeMode.passthrough, float weight=1) {
+    void pushIOffsetAxis(int axis, float offset, ParamMergeMode mode = ParamMergeMode.passthrough, float weight = 1) {
         this.value.vector[axis] = offset;
     }
 
@@ -342,7 +343,7 @@ public:
         Move an axis point to a new offset
     */
     void moveAxisPoint(uint axis, uint oldidx, float newoff) {
-        assert(oldidx > 0 && oldidx < this.axisPointCount(axis)-1, "invalid point index");
+        assert(oldidx > 0 && oldidx < this.axisPointCount(axis) - 1, "invalid point index");
         assert(newoff > 0 && newoff < 1, "offset out of bounds");
         if (isVec2)
             assert(axis <= 1, "bad axis");
@@ -351,17 +352,17 @@ public:
 
         // Find the index at which to insert
         uint index;
-        for(index = 1; index < axisPoints[axis].length; index++) {
-            if (axisPoints[axis][index+1] > newoff)
+        for (index = 1; index < axisPoints[axis].length; index++) {
+            if (axisPoints[axis][index + 1] > newoff)
                 break;
         }
-        
+
         if (oldidx != index) {
             nu_swap(axisPoints[axis][oldidx], axisPoints[axis][index]);
         }
 
         // Tell all bindings to reinterpolate
-        foreach(binding; bindings) {
+        foreach (binding; bindings) {
             binding.moveKeypoints(axis, oldidx, index);
         }
     }
@@ -378,7 +379,7 @@ public:
 
         // Find the index at which to insert
         uint index;
-        for(index = 1; index < axisPoints[axis].length; index++) {
+        for (index = 1; index < axisPoints[axis].length; index++) {
             if (axisPoints[axis][index] > off)
                 break;
         }
@@ -387,7 +388,7 @@ public:
         axisPoints[axis][index] = off;
 
         // Tell all bindings to insert space into their arrays
-        foreach(binding; bindings) {
+        foreach (binding; bindings) {
             binding.insertKeypoints(axis, index);
         }
     }
@@ -408,7 +409,7 @@ public:
         axisPoints[axis].removeAt(index);
 
         // Tell all bindings to remove it from their arrays
-        foreach(binding; bindings) {
+        foreach (binding; bindings) {
             binding.deleteKeypoints(axis, index);
         }
     }
@@ -418,10 +419,10 @@ public:
     */
     void reverseAxis(uint axis) {
         in_reverse(axisPoints[axis]);
-        foreach(ref i; axisPoints[axis]) {
+        foreach (ref i; axisPoints[axis]) {
             i = 1 - i;
         }
-        foreach(binding; bindings) {
+        foreach (binding; bindings) {
             binding.reverseAxis(axis);
         }
     }
@@ -449,8 +450,8 @@ public:
         vec2 off = vec2(tmp.x / range.x, tmp.y / range.y);
 
         vec2 clamped = vec2(
-            clamp(off.x, 0, 1),
-            clamp(off.y, 0, 1),
+                clamp(off.x, 0, 1),
+                clamp(off.y, 0, 1),
         );
         return clamped;
     }
@@ -468,11 +469,15 @@ public:
     */
     float mapAxis(uint axis, float value) {
         vec2 input = min;
-        if (axis == 0) input.x = value;
-        else input.y = value;
+        if (axis == 0)
+            input.x = value;
+        else
+            input.y = value;
         vec2 output = mapValue(input);
-        if (axis == 0) return output.x;
-        else return output.y;
+        if (axis == 0)
+            return output.x;
+        else
+            return output.y;
     }
 
     /**
@@ -480,11 +485,15 @@ public:
     */
     float unmapAxis(uint axis, float offset) {
         vec2 input = min;
-        if (axis == 0) input.x = offset;
-        else input.y = offset;
+        if (axis == 0)
+            input.x = offset;
+        else
+            input.y = offset;
         vec2 output = unmapValue(input);
-        if (axis == 0) return output.x;
-        else return output.y;
+        if (axis == 0)
+            return output.x;
+        else
+            return output.y;
     }
 
     /**
@@ -494,7 +503,7 @@ public:
         uint closestPoint = 0;
         float closestDist = float.infinity;
 
-        foreach(i, pointVal; axisPoints[axis]) {
+        foreach (i, pointVal; axisPoints[axis]) {
             float dist = abs(pointVal - offset);
             if (dist < closestDist) {
                 closestDist = dist;
@@ -541,9 +550,11 @@ public:
         Find a binding by node ref and name
     */
     ParameterBinding getBinding(Node n, string bindingName) {
-        foreach(ref binding; bindings) {
-            if (binding.getNode() !is n) continue;
-            if (binding.getName == bindingName) return binding;
+        foreach (ref binding; bindings) {
+            if (binding.getNode() !is n)
+                continue;
+            if (binding.getName == bindingName)
+                return binding;
         }
         return null;
     }
@@ -552,9 +563,11 @@ public:
         Check if a binding exists for a given node and name
     */
     bool hasBinding(Node n, string bindingName) {
-        foreach(ref binding; bindings) {
-            if (binding.getNode() !is n) continue;
-            if (binding.getName == bindingName) return true;
+        foreach (ref binding; bindings) {
+            if (binding.getNode() !is n)
+                continue;
+            if (binding.getName == bindingName)
+                return true;
         }
         return false;
     }
@@ -563,8 +576,9 @@ public:
         Check if any bindings exists for a given node
     */
     bool hasAnyBinding(Node n) {
-        foreach(ref binding; bindings) {
-            if (binding.getNode() is n) return true;
+        foreach (ref binding; bindings) {
+            if (binding.getNode() is n)
+                return true;
         }
         return false;
     }
@@ -583,7 +597,8 @@ public:
         if (setZero) {
             vec2u zeroIndex = findClosestKeypoint(vec2(0, 0));
             vec2 zero = getKeypointValue(zeroIndex);
-            if (abs(zero.x) < 0.001 && abs(zero.y) < 0.001) b.reset(zeroIndex);
+            if (abs(zero.x) < 0.001 && abs(zero.y) < 0.001)
+                b.reset(zeroIndex);
         }
 
         return b;

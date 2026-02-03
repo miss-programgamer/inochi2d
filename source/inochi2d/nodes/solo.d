@@ -23,7 +23,7 @@ private:
     uint activeLayer;
 
 protected:
-    
+
     override
     void onDraw(float delta, DrawList drawList, MaskingMode mode) {
 
@@ -58,4 +58,5 @@ public:
     */
     override @property bool isDelegated() @nogc => true;
 }
+
 mixin Register!(Solo, in_node_registry);

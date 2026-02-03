@@ -24,24 +24,24 @@ private:
 @nogc:
 
     // Working set
-    DrawListAlloc           _call;
-    DrawCmd                 _ccmd;
+    DrawListAlloc _call;
+    DrawCmd _ccmd;
 
     // Draw Commands
-    vector!DrawCmd          _cmds;
-    uint                    _cmdp;
+    vector!DrawCmd _cmds;
+    uint _cmdp;
 
     // Vertex Data
-    vector!VtxData          _vtxs;
-    uint                    _vtxp;
+    vector!VtxData _vtxs;
+    uint _vtxp;
 
     // Index Data
-    vector!uint             _idxs;
-    uint                    _idxp;
+    vector!uint _idxs;
+    uint _idxp;
 
     // Buffer allocations
-    vector!DrawListAlloc    _allocs;
-    uint                    _allp;
+    vector!DrawListAlloc _allocs;
+    uint _allp;
 
     // Stacks
     stack!(Texture[IN_MAX_ATTACHMENTS]) _targetsStack;
@@ -49,12 +49,12 @@ private:
 public:
 
     // Destructor
-    ~this() {
+     ~this() {
         _cmds.clear();
         _vtxs.clear();
         _idxs.clear();
         _allocs.clear();
-        _targetsStack.clear();   
+        _targetsStack.clear();
     }
 
     /**
@@ -65,22 +65,22 @@ public:
     /**
         Command Buffer
     */
-    @property DrawCmd[] commands() => _cmds[0.._cmdp];
+    @property DrawCmd[] commands() => _cmds[0 .. _cmdp];
 
     /**
         Vertex data
     */
-    @property VtxData[] vertices() => _vtxs[0.._vtxp];
+    @property VtxData[] vertices() => _vtxs[0 .. _vtxp];
 
     /**
         Index data
     */
-    @property uint[] indices() => _idxs[0.._idxp];
+    @property uint[] indices() => _idxs[0 .. _idxp];
 
     /**
         Allocated meshes
     */
-    @property DrawListAlloc[] allocations() => _allocs[0.._allp];
+    @property DrawListAlloc[] allocations() => _allocs[0 .. _allp];
 
     /**
         Allocates the given mesh in the draw list, allowing its
@@ -95,7 +95,7 @@ public:
             $(D null) otherwise.
     */
     DrawListAlloc* allocate(VtxData[] vtx, uint[] idx) {
-        
+
         // Invalid vertex buffer check.
         if (vtx.length < 3)
             return null;
@@ -105,18 +105,18 @@ public:
             return null;
 
         // Resize if stuff doesn't fit.
-        if (_vtxp+vtx.length >= _vtxs.length)
-            _vtxs.resize(_vtxp+vtx.length+1);
-        if (_idxp+idx.length >= _idxs.length)
-            _idxs.resize(_idxp+idx.length+1);
+        if (_vtxp + vtx.length >= _vtxs.length)
+            _vtxs.resize(_vtxp + vtx.length + 1);
+        if (_idxp + idx.length >= _idxs.length)
+            _idxs.resize(_idxp + idx.length + 1);
 
         // Meshes supply their own index data, as such
         // we offset it here to fit within our buffer.
         if (!useBaseVertex)
-            idx[0..$] += _idxp;
+            idx[0 .. $] += _idxp;
 
-        _vtxs[_vtxp.._vtxp+vtx.length] = vtx[0..$];
-        _idxs[_idxp.._idxp+idx.length] = idx[0..$];
+        _vtxs[_vtxp .. _vtxp + vtx.length] = vtx[0 .. $];
+        _idxs[_idxp .. _idxp + idx.length] = idx[0 .. $];
         _vtxp += vtx.length;
         _idxp += idx.length;
 
@@ -172,7 +172,7 @@ public:
     */
     void setVariables(T)(uint nid, T value) if (T.sizeof <= _ccmd.variables.sizeof) {
         _ccmd.typeId = nid;
-        _ccmd.variables[0..T.sizeof] = (cast(void*)&value)[0..T.sizeof];
+        _ccmd.variables[0 .. T.sizeof] = (cast(void*)&value)[0 .. T.sizeof];
     }
 
     /**
@@ -189,8 +189,9 @@ public:
             alloc = The vertex allocation cookie.
     */
     void setMesh(DrawListAlloc* alloc) {
-        if (!alloc) return;
-        
+        if (!alloc)
+            return;
+
         _ccmd.allocId = alloc.allocId;
         _ccmd.idxOffset = alloc.idxOffset;
         _ccmd.vtxOffset = alloc.vtxOffset;
@@ -353,7 +354,7 @@ struct DrawCmd {
         Number of indices.
     */
     uint elemCount;
-    
+
     /**
         Type ID of the node being drawn.
     */

@@ -37,9 +37,9 @@ struct Triangle {
         float v = (v3.x * v2.y - v2.x * v3.y) / den;
         float w = (v1.x * v3.y - v3.x * v1.y) / den;
         return vec3(
-            1.0 - v - w,
-            v,
-            w,
+                1.0 - v - w,
+                v,
+                w,
         );
     }
 
@@ -59,8 +59,8 @@ struct Triangle {
         float d2 = sign(pt, p2, p3);
         float d3 = sign(pt, p3, p1);
         return !(
-            ((d1 < 0) || (d2 < 0) || (d3 < 0)) &&
-            ((d1 > 0) || (d2 > 0) || (d3 > 0))
+                ((d1 < 0) || (d2 < 0) || (d3 < 0)) &&
+                ((d1 > 0) || (d2 > 0) || (d3 > 0))
         );
     }
 }
@@ -77,6 +77,6 @@ struct Triangle {
         A float determining the sign between p1, p2 and p3.
 */
 pragma(inline, true)
-float sign (ref vec2 p1, ref vec2 p2, ref vec2 p3) @nogc nothrow pure {
+float sign(ref vec2 p1, ref vec2 p2, ref vec2 p3) @nogc nothrow pure {
     return (p1.x - p3.x) * (p2.y - p3.y) - (p2.x - p3.x) * (p1.y - p3.y);
 }

@@ -23,12 +23,12 @@ public import inp.format;
 pragma(inline, true)
 T deserialize(T)(ref DataNode data) {
     import numem : nogc_new;
-    
+
     static if (is(T == class))
         T tmp = nogc_new!T;
     else
         T tmp;
-    
+
     data.deserialize(tmp);
     return tmp;
 }
@@ -37,9 +37,9 @@ pragma(inline, true)
 void deserialize(T)(ref DataNode data, T[] destination) @nogc {
     if (!data.isArray)
         return;
-    
-    foreach(ref ae; data.array) {
-        foreach(i; 0..destination.length) {
+
+    foreach (ref ae; data.array) {
+        foreach (i; 0 .. destination.length) {
             ae.deserialize(destination[i]);
         }
     }
@@ -68,34 +68,33 @@ void deserialize(T)(ref DataNode data, ref T destination) @nogc {
         if (!data.isNull)
             destination = cast(T)data.text;
     } else static if (is(T == bool)) {
-        destination = data.boolean;  
+        destination = data.boolean;
     } else static if (__traits(isFloating, T)) {
         destination = cast(T)data.tryCoerce!float;
     } else static if (__traits(isIntegral, T)) {
         static if (__traits(isUnsigned, T))
             destination = cast(T)data.tryCoerce!ulong;
-        else 
+        else
             destination = cast(T)data.tryCoerce!long;
     } else static if (is(T == VectorImpl!(VT, Args), VT, Args...)) {
         if (!data.isArray)
             return;
 
         destination.resize(data.length);
-        foreach(ref value; data.array) {
+        foreach (ref value; data.array) {
             destination ~= value.deserialize!VT();
         }
     } else static if (is(T == MapImpl!(string, VT, Args), VT, Args...)) {
         if (!data.isObject)
             return;
-    
-        foreach(key, ref value; data.object) {
+
+        foreach (key, ref value; data.object) {
             destination[key] = value.deserialize!VT();
         }
     } else {
         destination = data.tryCoerce!T;
     }
 }
-
 
 /**
     Serializes a given type
@@ -105,12 +104,12 @@ DataNode serialize(T)(auto ref T toSerialize) @nogc {
     import std.range : ElementType;
     import std.traits : KeyType, ValueType;
     import nulib.collections;
-    
+
     enum VType = dataNodeTypeOf!T;
 
-    static if(is(T == DataNode)) {
-        return toSerialize;  
-    } else static if(VType == DataNodeType.undefined) {
+    static if (is(T == DataNode)) {
+        return toSerialize;
+    } else static if (VType == DataNodeType.undefined) {
         return DataNode.init;
     } else static if (VType == DataNodeType.object_) {
         static if (is(T == MapImpl!(string, VT, Args), VT, Args...)) {
@@ -118,7 +117,7 @@ DataNode serialize(T)(auto ref T toSerialize) @nogc {
             enum DataNodeType VDType = dataNodeTypeOf!VT;
             static if (VDType != DataNodeType.undefined) {
                 DataNode obj = DataNode.createObject();
-                foreach(kv; toSerialize.byKeyValue) {
+                foreach (kv; toSerialize.byKeyValue) {
                     obj[kv.key] = kv.value.serialize();
                 }
                 return obj;
@@ -131,7 +130,7 @@ DataNode serialize(T)(auto ref T toSerialize) @nogc {
             enum EVType = dataNodeTypeOf!VT;
             static if (EVType != DataNodeType.undefined) {
                 DataNode arr = DataNode.createArray();
-                foreach(ref element; toSerialize) {
+                foreach (ref element; toSerialize) {
                     arr.array ~= serialize(element);
                 }
                 return arr;
@@ -151,15 +150,15 @@ DataNode serialize(T)(auto ref T toSerialize) @nogc {
         enum EVType = dataNodeTypeOf!(ElementType!T);
         static if (EVType != DataNodeType.undefined) {
             DataNode arr = DataNode.createArray();
-            foreach(ref element; toSerialize) {
+            foreach (ref element; toSerialize) {
                 arr.array ~= serialize(element);
             }
             return arr;
         } else {
             return DataNode.createArray();
         }
-    } else static if (__traits(isFloating, T)) { 
-        return DataNode(isFinite(toSerialize) ? toSerialize : 0);  
+    } else static if (__traits(isFloating, T)) {
+        return DataNode(isFinite(toSerialize) ? toSerialize : 0);
     } else {
         return DataNode(toSerialize);
     }
@@ -172,12 +171,12 @@ T tryGet(T)(auto ref DataNode data, T defaultValue = T.init) {
     static if (__traits(isScalar, T)) {
         static if (__traits(isFloating, T))
             defaultValue = 0.0;
-        
+
         return data.isNumber ? data.tryCoerce!T : defaultValue;
     }
     if (data.type != dataNodeTypeOf!T)
         return defaultValue;
-    
+
     return data.deserialize!T();
 }
 
@@ -187,7 +186,7 @@ T tryGet(T)(auto ref DataNode data, T defaultValue = T.init) {
 T tryGet(T)(ref DataNode object, string key, T defaultValue = T.init) {
     if (key !in object)
         return defaultValue;
-    
+
     return object[key].deserialize!T();
 }
 
@@ -199,7 +198,7 @@ void tryGetRef(T)(ref DataNode object, ref T dst, string key) if (__traits(isFlo
         dst = 0.0;
         return;
     }
-    
+
     object[key].deserialize!T(dst);
 }
 
@@ -211,6 +210,6 @@ void tryGetRef(T)(ref DataNode object, ref T dst, string key, T defaultValue = T
         dst = defaultValue;
         return;
     }
-    
+
     object[key].deserialize!T(dst);
 }

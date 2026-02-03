@@ -70,7 +70,7 @@ public:
     alias value this;
     T base;
     T offset;
-    
+
     /**
         The combined value.
     */

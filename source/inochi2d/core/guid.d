@@ -16,7 +16,6 @@ import nulib.uuid;
 */
 alias GUID = UUID;
 
-
 /**
     Creates a GUID from a legacy UUID.
 
@@ -75,8 +74,7 @@ GUID tryGetGUID(ref DataNode obj, string uuidKey, string guidKey = "guid") @nogc
 */
 GUID tryGetGUID(ref DataNode obj) @nogc {
     return obj.isNumber ?
-        obj.tryGet!uint(uint.max).toGuid :
-        GUID(obj.text);
+        obj.tryGet!uint(uint.max).toGuid : GUID(obj.text);
 }
 
 //

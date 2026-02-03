@@ -36,7 +36,7 @@ class Camera : NuRefCounted {
         Size of the camera's viewport.
     */
     vec2 size = vec2(1, 1);
-    
+
     /**
         The view-projection matrix for the camera.
     */
@@ -76,7 +76,7 @@ public:
     /**
         Gets the center offset of the camera
     */
-    @property vec2 centerOffset() => size/2.0;
+    @property vec2 centerOffset() => size / 2.0;
 
     /**
         Matrix for this camera
@@ -89,14 +89,17 @@ public:
     */
     override
     void update() @nogc {
-        if(!position.isFinite) position = vec2(0);
-        if(!scale.isFinite) scale = 1;
-        if(!rotation.isFinite) rotation = 0;
-        
-        vec2 origin = vec2(size.x/2, size.y/2);
-        vec3 pos = vec3(position.x, position.y, -(ushort.max/2));
+        if (!position.isFinite)
+            position = vec2(0);
+        if (!scale.isFinite)
+            scale = 1;
+        if (!rotation.isFinite)
+            rotation = 0;
+
+        vec2 origin = vec2(size.x / 2, size.y / 2);
+        vec3 pos = vec3(position.x, position.y, -(ushort.max / 2));
         projection =
-            mat4.orthographic(0f, size.x, size.y, 0, 0, ushort.max) * 
+            mat4.orthographic(0f, size.x, size.y, 0, 0, ushort.max) *
             mat4.translation(origin.x, origin.y, 0) *
             mat4.zRotation(rotation) *
             mat4.scaling(scale, scale, 0) *
@@ -110,7 +113,7 @@ public:
 struct Transform {
 private:
 @nogc:
-    
+
     // NOTE:    This private var is declared here to allow instantiating
     //          the Transform like prior, but with the added benefit of
     //          being able to do so with the new auto-generated constructors.
@@ -126,7 +129,7 @@ public:
     /**
         The rotation of the transform
     */
-    vec3 rotation = vec3(0, 0, 0);//; = quat.identity;
+    vec3 rotation = vec3(0, 0, 0); //; = quat.identity;
 
     /**
         The scale of the transform
@@ -144,15 +147,15 @@ public:
         Transform tnew;
 
         mat4 strs = other.trs * this.trs;
-        
+
         // TRANSLATION
         tnew.translation = vec3(strs * vec4(1, 1, 1, 1));
-        
+
         // ROTATION
-        tnew.rotation = this.rotation+other.rotation;
-        
+        tnew.rotation = this.rotation + other.rotation;
+
         // SCALE
-        tnew.scale = this.scale*other.scale;
+        tnew.scale = this.scale * other.scale;
         tnew.trs = strs;
         return tnew;
     }
@@ -163,9 +166,9 @@ public:
     Transform opBinary(string op : "+")(Transform other) @nogc {
         Transform tnew;
 
-        tnew.translation = this.translation+other.translation;
-        tnew.rotation = this.rotation+other.rotation;
-        tnew.scale = this.scale*other.scale;
+        tnew.translation = this.translation + other.translation;
+        tnew.rotation = this.rotation + other.rotation;
+        tnew.scale = this.scale * other.scale;
         tnew.update();
 
         return tnew;
@@ -182,10 +185,11 @@ public:
         Updates the internal matrix of this transform
     */
     void update() {
-        trs = 
+        trs =
             mat4.translation(this.translation) *
             quat.eulerRotation(this.rotation.x, this.rotation.y, this.rotation.z).toMatrix!(4, 4) *
-            mat4.scaling(this.scale.x, this.scale.y, 1);
+            mat4.scaling(
+                    this.scale.x, this.scale.y, 1);
     }
 
     /**
@@ -252,9 +256,10 @@ vec3 relativeVectorToInverse(mat4 lhs, mat4 rhs) @nogc pure {
 
 int[] findSurroundingTriangle(vec2 pt, ref MeshData bindingMesh) {
     bool isPointInTriangle(vec2 pt, int[] triangle) {
-        float sign (ref vec2 p1, ref vec2 p2, ref vec2 p3) {
+        float sign(ref vec2 p1, ref vec2 p2, ref vec2 p3) {
             return (p1.x - p3.x) * (p2.y - p3.y) - (p2.x - p3.x) * (p1.y - p3.y);
         }
+
         vec2 p1 = bindingMesh.vertices[triangle[0]];
         vec2 p2 = bindingMesh.vertices[triangle[1]];
         vec2 p3 = bindingMesh.vertices[triangle[2]];
@@ -268,12 +273,13 @@ int[] findSurroundingTriangle(vec2 pt, ref MeshData bindingMesh) {
 
         return !(hasNeg && hasPos);
     }
+
     int i = 0;
     int[] triangle = [0, 1, 2];
     while (i < bindingMesh.indices.length) {
         triangle[0] = bindingMesh.indices[i];
-        triangle[1] = bindingMesh.indices[i+1];
-        triangle[2] = bindingMesh.indices[i+2];
+        triangle[1] = bindingMesh.indices[i + 1];
+        triangle[2] = bindingMesh.indices[i + 2];
         if (isPointInTriangle(pt, triangle)) {
             return triangle;
         }
@@ -282,15 +288,14 @@ int[] findSurroundingTriangle(vec2 pt, ref MeshData bindingMesh) {
     return null;
 }
 
-
 // Calculate offset of point in coordinates of triangle.
 vec2 calcOffsetInTriangleCoords(vec2 pt, ref MeshData bindingMesh, ref int[] triangle) {
-    if ((pt - bindingMesh.vertices[triangle[0]]).lengthSquared > 
-        (pt - bindingMesh.vertices[triangle[1]]).lengthSquared) {
+    if ((pt - bindingMesh.vertices[triangle[0]]).lengthSquared >
+            (pt - bindingMesh.vertices[triangle[1]]).lengthSquared) {
         swap(triangle[0], triangle[1]);
     }
-    if ((pt - bindingMesh.vertices[triangle[0]]).lengthSquared > 
-        (pt - bindingMesh.vertices[triangle[2]]).lengthSquared) {
+    if ((pt - bindingMesh.vertices[triangle[0]]).lengthSquared >
+            (pt - bindingMesh.vertices[triangle[2]]).lengthSquared) {
         swap(triangle[0], triangle[2]);
     }
     auto p1 = bindingMesh.vertices[triangle[0]];
@@ -316,10 +321,10 @@ vec2 calcOffsetInTriangleCoords(vec2 pt, ref MeshData bindingMesh, ref int[] tri
         float cosB = dot(axis0, relPt) / relPt.length;
         float argB = acos(cosB);
         float sinB = sin(argB);
-        
+
         vec2 ortPt = vec2(relPt.length * cosB, relPt.length * sinB);
-        
-        mat2 H = mat2([1, -1/tanA, 0, 1/sinA]);
+
+        mat2 H = mat2([1, -1 / tanA, 0, 1 / sinA]);
         auto result = H * ortPt;
 
         return result;
@@ -341,10 +346,9 @@ alias vec4us = Vector!(ushort, 4); /// ditto
     Returns:
         The serialized vector
 */
-void onSerialize(T)(ref T value, ref DataNode dst) @nogc
-if(isVector!T) {
+void onSerialize(T)(ref T value, ref DataNode dst) @nogc if (isVector!T) {
     dst = DataNode.createArray();
-    static foreach(i; 0..T.dimension) {
+    static foreach (i; 0 .. T.dimension) {
         dst.array ~= DataNode(isFinite(value.vector[i]) ? value.vector[i] : 0);
     }
 }
@@ -353,10 +357,10 @@ if(isVector!T) {
     Gets whether a point is within an axis aligned rectangle
 */
 bool contains(vec4 a, vec2 b) {
-    return  b.x >= a.x && 
-            b.y >= a.y &&
-            b.x <= a.x+a.z &&
-            b.y <= a.y+a.w;
+    return b.x >= a.x &&
+        b.y >= a.y &&
+        b.x <= a.x + a.z &&
+        b.y <= a.y + a.w;
 }
 
 /**
@@ -365,11 +369,12 @@ bool contains(vec4 a, vec2 b) {
 bool areLineSegmentsIntersecting(vec2 p1, vec2 p2, vec2 p3, vec2 p4) {
     float epsilon = 0.00001f;
     float demoninator = (p4.y - p3.y) * (p2.x - p1.x) - (p4.x - p3.x) * (p2.y - p1.y);
-    if (demoninator == 0) return false;
+    if (demoninator == 0)
+        return false;
 
     float uA = ((p4.x - p3.x) * (p1.y - p3.y) - (p4.y - p3.y) * (p1.x - p3.x)) / demoninator;
     float uB = ((p2.x - p1.x) * (p1.y - p3.y) - (p2.y - p1.y) * (p1.x - p3.x)) / demoninator;
-    return (uA > 0+epsilon && uA < 1-epsilon && uB > 0+epsilon && uB < 1-epsilon);
+    return (uA > 0 + epsilon && uA < 1 - epsilon && uB > 0 + epsilon && uB < 1 - epsilon);
 }
 
 /**
@@ -381,7 +386,7 @@ enum InterpolateMode : uint {
         Round to nearest
     */
     nearest = 0,
-    
+
     /**
         Linear interpolation
     */
@@ -407,30 +412,30 @@ enum InterpolateMode : uint {
     Converts a string key into a interpolation mode.
 */
 InterpolateMode toInterpolateMode(string key) @nogc {
-    switch(key) {
+    switch (key) {
 
-        case "nearest":
-        case "Nearest":
-            return InterpolateMode.nearest;
+    case "nearest":
+    case "Nearest":
+        return InterpolateMode.nearest;
 
-        case "linear":
-        case "Linear":
-            return InterpolateMode.linear;
+    case "linear":
+    case "Linear":
+        return InterpolateMode.linear;
 
-        case "stepped":
-        case "Stepped":
-            return InterpolateMode.stepped;
+    case "stepped":
+    case "Stepped":
+        return InterpolateMode.stepped;
 
-        case "bezier":
-        case "Bezier":
-        case "quadratic":
-            return InterpolateMode.quadratic;
+    case "bezier":
+    case "Bezier":
+    case "quadratic":
+        return InterpolateMode.quadratic;
 
-        case "cubic":
-        case "Cubic":
-            return InterpolateMode.cubic;
-        
-        default:
-            return InterpolateMode.linear;
+    case "cubic":
+    case "Cubic":
+        return InterpolateMode.cubic;
+
+    default:
+        return InterpolateMode.linear;
     }
 }

@@ -9,9 +9,7 @@
 module inochi2d.cffi.eh;
 import numem;
 
-version(IN_DYNLIB):
-
-//
+version (IN_DYNLIB)  :  //
 //              ERROR HANDLING
 //
 
@@ -23,7 +21,7 @@ version(IN_DYNLIB):
         or $(D null).
 */
 export
-extern(C) const(char)* in_get_last_error() @nogc nothrow {
+extern (C) const(char)* in_get_last_error() @nogc nothrow {
     return __in_last_error.ptr;
 }
 
@@ -31,7 +29,7 @@ extern(C) const(char)* in_get_last_error() @nogc nothrow {
     Internal function which sets the current active error.
 */
 export
-extern(C) void __in_set_error(Exception ex) @nogc nothrow {
+extern (C) void __in_set_error(Exception ex) @nogc nothrow {
     assumeNoThrowNoGC(&__in_set_error_fn, ex);
 }
 
@@ -39,7 +37,7 @@ extern(C) void __in_set_error(Exception ex) @nogc nothrow {
     Internal function which clears errors.
 */
 export
-extern(C) void __in_clear_error() @nogc nothrow {
+extern (C) void __in_clear_error() @nogc nothrow {
 
     // Delete old error message (if needed)
     if (__in_last_error.length > 0)
@@ -63,18 +61,19 @@ private {
 //              DRT INIT
 //
 
-
 /// CRT CTOR
 pragma(crt_constructor)
-extern(C) private void in_crt_init() {
+extern (C) private void in_crt_init() {
     import core.runtime : rt_init;
+
     assumeNoGC(&rt_init);
     __in_clear_error();
 }
 
 /// CRT DTOR
 pragma(crt_destructor)
-extern(C) private void in_crt_term() {
+extern (C) private void in_crt_term() {
     import core.runtime : rt_term;
+
     assumeNoGC(&rt_term);
 }

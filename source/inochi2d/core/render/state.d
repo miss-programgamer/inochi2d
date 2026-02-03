@@ -55,89 +55,108 @@ import inmath;
 */
 enum BlendMode : uint {
     // Normal blending mode
-    normal          = 0x00,
+    normal = 0x00,
 
     // Multiply blending mode
-    multiply        = 0x01,
+    multiply = 0x01,
 
     // Screen
-    screen          = 0x02,
+    screen = 0x02,
 
     // Overlay
-    overlay         = 0x03,
+    overlay = 0x03,
 
     // Darken
-    darken          = 0x04,
+    darken = 0x04,
 
     // Lighten
-    lighten         = 0x05,
-    
+    lighten = 0x05,
+
     // Color Dodge
-    colorDodge      = 0x06,
+    colorDodge = 0x06,
 
     // Linear Dodge
-    linearDodge     = 0x07,
+    linearDodge = 0x07,
 
     // Add (Glow)
-    addGlow         = 0x08,
+    addGlow = 0x08,
 
     // Color Burn
-    colorBurn       = 0x09,
+    colorBurn = 0x09,
 
     // Hard Light
-    hardLight       = 0x0A,
+    hardLight = 0x0A,
 
     // Soft Light
-    softLight       = 0x0B,
+    softLight = 0x0B,
 
     // Difference
-    difference      = 0x0C,
+    difference = 0x0C,
 
     // Exclusion
-    exclusion       = 0x0D,
+    exclusion = 0x0D,
 
     // Subtract
-    subtract        = 0x0E,
+    subtract = 0x0E,
 
     // Inverse
-    inverse         = 0x0F,
+    inverse = 0x0F,
 
     // Destination In
-    destinationIn   = 0x10,
+    destinationIn = 0x10,
 
     // Clip to Lower
     // Special blending mode that clips the drawable
     // to a lower rendered area.
-    sourceIn        = 0x11,
+    sourceIn = 0x11,
 
     // Slice from Lower
     // Special blending mode that slices the drawable
     // via a lower rendered area.
     // Basically inverse ClipToLower
-    sourceOut       = 0x12
+    sourceOut = 0x12
 }
 
 BlendMode toBlendMode(string name) @nogc {
-    switch(name) with(BlendMode) {
-        default: return normal;
-        case "Multiply": return multiply;
-        case "Screen": return screen;
-        case "Overlay": return overlay;
-        case "Darken": return darken;
-        case "Lighten": return lighten;
-        case "ColorDodge": return colorDodge;
-        case "LinearDodge": return linearDodge;
-        case "AddGlow": return addGlow;
-        case "ColorBurn": return colorBurn;
-        case "HardLight": return hardLight;
-        case "SoftLight": return softLight;
-        case "Difference": return difference;
-        case "Exclusion": return exclusion;
-        case "Subtract": return subtract;
-        case "Inverse": return inverse;
-        case "DestinationIn": return destinationIn;
-        case "ClipToLower": return sourceIn;
-        case "SliceFromLower": return sourceOut;
+    switch (name) with (BlendMode) {
+    default:
+        return normal;
+    case "Multiply":
+        return multiply;
+    case "Screen":
+        return screen;
+    case "Overlay":
+        return overlay;
+    case "Darken":
+        return darken;
+    case "Lighten":
+        return lighten;
+    case "ColorDodge":
+        return colorDodge;
+    case "LinearDodge":
+        return linearDodge;
+    case "AddGlow":
+        return addGlow;
+    case "ColorBurn":
+        return colorBurn;
+    case "HardLight":
+        return hardLight;
+    case "SoftLight":
+        return softLight;
+    case "Difference":
+        return difference;
+    case "Exclusion":
+        return exclusion;
+    case "Subtract":
+        return subtract;
+    case "Inverse":
+        return inverse;
+    case "DestinationIn":
+        return destinationIn;
+    case "ClipToLower":
+        return sourceIn;
+    case "SliceFromLower":
+        return sourceOut;
     }
 }
 
@@ -164,17 +183,17 @@ enum MaskingMode : uint {
 }
 
 MaskingMode toMaskingMode(string name) @nogc {
-    switch(name) {
+    switch (name) {
 
-        case "Mask":
-        case "mask":
-            return MaskingMode.mask;
+    case "Mask":
+    case "mask":
+        return MaskingMode.mask;
 
-        case "DodgeMask":
-        case "dodgeMask":
-            return MaskingMode.dodge;
-        
-        default:
-            return MaskingMode.mask;
+    case "DodgeMask":
+    case "dodgeMask":
+        return MaskingMode.dodge;
+
+    default:
+        return MaskingMode.mask;
     }
 }

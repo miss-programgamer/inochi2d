@@ -31,9 +31,11 @@ private:
     void updateCounts() {
         maskCount_ = 0;
         dodgeCount_ = 0;
-        foreach(m; masks) {
-            if (m.mode == MaskingMode.mask) maskCount_++;
-            if (m.mode == MaskingMode.dodge) dodgeCount_++;
+        foreach (m; masks) {
+            if (m.mode == MaskingMode.mask)
+                maskCount_++;
+            if (m.mode == MaskingMode.dodge)
+                dodgeCount_++;
         }
     }
 
@@ -63,11 +65,11 @@ protected:
     override
     void onSerialize(ref DataNode object, bool recursive = true) {
         super.onSerialize(object, recursive);
-        
+
         // Serialize masks, if any are applied.
         if (masks_.length > 0) {
             object["masks"] = DataNode.createArray();
-            foreach(mask; masks_) {
+            foreach (mask; masks_) {
                 object["masks"] ~= mask.serialize();
             }
         }
@@ -86,7 +88,7 @@ protected:
         // Deserialize masks, if any are present.
         if ("masks" in object && object["masks"].isArray) {
             masks_.resize(object["masks"].length);
-            foreach(i, ref DataNode value; object["masks"].array) {
+            foreach (i, ref DataNode value; object["masks"].array) {
                 masks_[i] = value.deserialize!MaskBinding();
             }
         }
@@ -99,7 +101,7 @@ protected:
     void onFinalize() @nogc {
         super.onFinalize();
 
-        foreach_reverse(i; 0..masks_.length) {
+        foreach_reverse (i; 0 .. masks_.length) {
             if (Visual nMask = puppet.find!Visual(masks_[i].maskSrcGUID)) {
                 masks_[i].maskSrc = nMask;
                 continue;
@@ -126,7 +128,7 @@ public:
     /**
         List of masks to apply
     */
-    @property MaskBinding[] masks() => masks_[0..$];
+    @property MaskBinding[] masks() => masks_[0 .. $];
 
     /**
         Whether the renderer should delegate rendering logic
@@ -150,7 +152,7 @@ public:
             $(D false) otherwise.
     */
     bool isMaskedBy(Visual visual) {
-        foreach(mask; masks) {
+        foreach (mask; masks) {
             if (mask.maskSrc.guid == visual.guid)
                 return true;
         }
@@ -171,7 +173,7 @@ public:
         if (visual is null)
             return -1;
 
-        foreach(i, ref mask; masks) {
+        foreach (i, ref mask; masks) {
             if (mask.maskSrc.guid == visual.guid)
                 return i;
         }
@@ -189,13 +191,14 @@ public:
             $(D -1) if the visual was not found.
     */
     ptrdiff_t getMaskIndex(GUID guid) {
-        foreach(i, ref mask; masks) {
+        foreach (i, ref mask; masks) {
             if (mask.maskSrc.guid == guid)
                 return i;
         }
         return -1;
     }
 }
+
 mixin Register!(Visual, in_node_registry);
 
 /**

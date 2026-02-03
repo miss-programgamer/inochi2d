@@ -43,7 +43,7 @@ private:
 protected:
 
     override
-    void onSerialize(ref DataNode object, bool recursive=true) @nogc {
+    void onSerialize(ref DataNode object, bool recursive = true) @nogc {
         super.onSerialize(object, recursive);
         object["blend_mode"] = cast(uint)blendingMode;
         object["tint"] = tint.serialize();
@@ -60,7 +60,7 @@ protected:
         object.tryGetRef(tint, "tint");
         object.tryGetRef(screenTint, "screenTint");
         object.tryGetRef(masks, "masks");
-        
+
         if ("blend_mode" in object && object["blend_mode"].isNumber)
             blendingMode = cast(BlendMode)object.tryGet!uint("blend_mode", blendingMode.normal);
         else
@@ -112,24 +112,24 @@ protected:
     void onDraw(float delta, DrawList drawList, MaskingMode mode) {
         if (visible_.length == 0)
             return;
-        
+
         CompositeVars compositeVars = CompositeVars(
-            tint*offsetTint,
-            screenTint*offsetScreenTint,
-            opacity*offsetOpacity
+                tint * offsetTint,
+                screenTint * offsetScreenTint,
+                opacity * offsetOpacity
         );
 
         visible_.sortNodes();
 
         // Push sub render area.
         drawList.beginComposite();
-            foreach(Node child; visible_) {
-                child.draw(delta, drawList);
-            }
+        foreach (Node child; visible_) {
+            child.draw(delta, drawList);
+        }
         drawList.endComposite();
 
         if (masks.length > 0) {
-            foreach(ref mask; masks) {
+            foreach (ref mask; masks) {
                 mask.maskSrc.onDraw(delta, drawList, mask.mode);
             }
         }
@@ -176,7 +176,8 @@ public:
     MaskBinding[] masks;
 
     /// Destructor
-    ~this() { }
+    ~this() {
+    }
 
     /**
         Constructs a new mask
@@ -205,18 +206,18 @@ public:
     */
     override
     bool hasProperty(string key) {
-        switch(key) {
-            case "opacity":
-            case "tint.r":
-            case "tint.g":
-            case "tint.b":
-            case "screenTint.r":
-            case "screenTint.g":
-            case "screenTint.b":
-                return true;
+        switch (key) {
+        case "opacity":
+        case "tint.r":
+        case "tint.g":
+        case "tint.b":
+        case "screenTint.r":
+        case "screenTint.g":
+        case "screenTint.b":
+            return true;
 
-            default:
-                return super.hasProperty(key);
+        default:
+            return super.hasProperty(key);
         }
     }
 
@@ -231,15 +232,23 @@ public:
     */
     override
     float getProperty(string key) {
-        switch(key) {
-            case "opacity":         return offsetOpacity;
-            case "tint.r":          return offsetTint.x;
-            case "tint.g":          return offsetTint.y;
-            case "tint.b":          return offsetTint.z;
-            case "screenTint.r":    return offsetScreenTint.x;
-            case "screenTint.g":    return offsetScreenTint.y;
-            case "screenTint.b":    return offsetScreenTint.z;
-            default:                return super.getProperty(key);
+        switch (key) {
+        case "opacity":
+            return offsetOpacity;
+        case "tint.r":
+            return offsetTint.x;
+        case "tint.g":
+            return offsetTint.y;
+        case "tint.b":
+            return offsetTint.z;
+        case "screenTint.r":
+            return offsetScreenTint.x;
+        case "screenTint.g":
+            return offsetScreenTint.y;
+        case "screenTint.b":
+            return offsetScreenTint.z;
+        default:
+            return super.getProperty(key);
         }
     }
 
@@ -254,18 +263,18 @@ public:
     */
     override
     float getPropertyDefault(string key) {
-        switch(key) {
-            case "opacity":
-            case "tint.r":
-            case "tint.g":
-            case "tint.b":
-                return 1;
-            case "screenTint.r":
-            case "screenTint.g":
-            case "screenTint.b":
-                return 0;
-            default: 
-                return super.getPropertyDefault(key);
+        switch (key) {
+        case "opacity":
+        case "tint.r":
+        case "tint.g":
+        case "tint.b":
+            return 1;
+        case "screenTint.r":
+        case "screenTint.g":
+        case "screenTint.b":
+            return 0;
+        default:
+            return super.getPropertyDefault(key);
         }
     }
 
@@ -278,31 +287,31 @@ public:
     */
     override
     void setProperty(string key, float value) {
-        switch(key) {
-            case "opacity":
-                offsetOpacity *= value;
-                return;
-            case "tint.r":
-                offsetTint.x *= value;
-                return;
-            case "tint.g":
-                offsetTint.y *= value;
-                return;
-            case "tint.b":
-                offsetTint.z *= value;
-                return;
-            case "screenTint.r":
-                offsetScreenTint.x += value;
-                return;
-            case "screenTint.g":
-                offsetScreenTint.y += value;
-                return;
-            case "screenTint.b":
-                offsetScreenTint.z += value;
-                return;
-            default:
-                super.setProperty(key, value);
-                return;
+        switch (key) {
+        case "opacity":
+            offsetOpacity *= value;
+            return;
+        case "tint.r":
+            offsetTint.x *= value;
+            return;
+        case "tint.g":
+            offsetTint.y *= value;
+            return;
+        case "tint.b":
+            offsetTint.z *= value;
+            return;
+        case "screenTint.r":
+            offsetScreenTint.x += value;
+            return;
+        case "screenTint.g":
+            offsetScreenTint.y += value;
+            return;
+        case "screenTint.b":
+            offsetScreenTint.z += value;
+            return;
+        default:
+            super.setProperty(key, value);
+            return;
         }
     }
 
@@ -313,11 +322,8 @@ public:
         this.findVisuals(visible_);
     }
 }
+
 mixin Register!(Composite, in_node_registry);
-
-
-
-
 
 //
 //              IMPLEMENTATION DETAILS
@@ -327,7 +333,7 @@ __gshared Mesh __screenSpaceMesh;
 
 // We are allocating extra data library-wide here.
 pragma(crt_constructor)
-extern(C) void __in_setup_composite() {
+extern (C) void __in_setup_composite() {
     if (!__screenSpaceMesh) {
         uint[6] indices = [
             0, 1, 2,
@@ -341,9 +347,9 @@ extern(C) void __in_setup_composite() {
         ];
         vec2[4] vertices = [
             vec2(-1, -1),
-            vec2(-1,  1),
-            vec2(1,  -1),
-            vec2(1,   1)
+            vec2(-1, 1),
+            vec2(1, -1),
+            vec2(1, 1)
         ];
         __screenSpaceMesh = Mesh.fromMeshData(MeshData(vertices, uvs, indices));
     }
@@ -351,6 +357,6 @@ extern(C) void __in_setup_composite() {
 
 // And deallocating it again
 pragma(crt_destructor)
-extern(C) void __in_cleanup_composite() {
+extern (C) void __in_cleanup_composite() {
     __screenSpaceMesh.release();
 }

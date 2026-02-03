@@ -7,4 +7,5 @@
     Authors: Luna Nielsen
 */
 module inochi2d.core.phys;
+
 public import inochi2d.core.phys.system;

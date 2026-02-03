@@ -33,7 +33,7 @@ protected:
             recursive = Whether to recurse through children.
     */
     override
-    void onSerialize(ref DataNode object, bool recursive=true) {
+    void onSerialize(ref DataNode object, bool recursive = true) {
         super.onSerialize(object, recursive);
 
         // NOTE:    MeshData is set up to free its contents on
@@ -51,7 +51,7 @@ protected:
     override
     void onDeserialize(ref DataNode object) {
         super.onDeserialize(object);
-        
+
         this.deformed_ = nogc_new!DeformedMesh();
         this.base_ = nogc_new!DeformedMesh();
         this.mesh = Mesh.fromMeshData(object.tryGet!MeshData("mesh"));
@@ -91,7 +91,7 @@ protected:
     */
     override
     void onPostUpdate(DrawList drawList) {
-        
+
         // No deltas?
         if (deformDeltas_.length == 0) {
             super.onPostUpdate(drawList);
@@ -99,25 +99,25 @@ protected:
         }
 
         // Calculate the deltas from the world matrix.
-        foreach(i; 0..deformDeltas_.length)
+        foreach (i; 0 .. deformDeltas_.length)
             deformDeltas_[i] = base_.points[i] - deformed_.points[i];
 
         // Use the weights to deform each subpoint by a delta determined
         // by the weight to each vertex in their triangle.
-        foreach(i, mesh; toDeform) {
-            foreach(j; 0..mesh.deformPoints.length) {
+        foreach (i, mesh; toDeform) {
+            foreach (j; 0 .. mesh.deformPoints.length) {
                 vec2 mp = mesh.deformPoints[j];
 
-                foreach(k; 0..deformed_.elementCount/3) {
+                foreach (k; 0 .. deformed_.elementCount / 3) {
                     uint[3] idx = [
-                        mesh_.indices[(k*3)+0],
-                        mesh_.indices[(k*3)+1],
-                        mesh_.indices[(k*3)+2],
+                        mesh_.indices[(k * 3) + 0],
+                        mesh_.indices[(k * 3) + 1],
+                        mesh_.indices[(k * 3) + 2],
                     ];
                     Triangle tri = Triangle(
-                        base_.points[idx[0]],
-                        base_.points[idx[1]],
-                        base_.points[idx[2]],
+                            base_.points[idx[0]],
+                            base_.points[idx[1]],
+                            base_.points[idx[2]],
                     );
 
                     // Do some cheaper checks first.
@@ -125,8 +125,8 @@ protected:
                     float maxX = max(tri.p1.x, tri.p2.x, tri.p3.x);
                     float minY = min(tri.p1.y, tri.p2.y, tri.p3.y);
                     float maxY = max(tri.p1.y, tri.p2.y, tri.p3.y);
-                    if (!(minX < mp.x && maxX > mp.x) && 
-                        !(minY < mp.y && maxY > mp.y))
+                    if (!(minX < mp.x && maxX > mp.x) &&
+                            !(minY < mp.y && maxY > mp.y))
                         continue;
 
                     // Expensive check and barycentric coordinates.
@@ -135,9 +135,9 @@ protected:
                         continue;
 
                     mesh.deform(j, -(
-                        (deformDeltas_[idx[0]]*bc.x) +
-                        (deformDeltas_[idx[1]]*bc.y) +
-                        (deformDeltas_[idx[2]]*bc.z)
+                            (deformDeltas_[idx[0]] * bc.x) +
+                            (deformDeltas_[idx[1]] * bc.y) +
+                            (deformDeltas_[idx[2]] * bc.z)
                     ));
                     break;
                 }
@@ -156,7 +156,7 @@ public:
     final @property void mesh(Mesh value) @nogc {
         if (value is mesh_)
             return;
-        
+
         if (mesh_)
             mesh_.release();
 
@@ -178,7 +178,7 @@ public:
         import nulib.math : min;
 
         size_t m = min(value.length, deformed_.points.length);
-        deformed_.points[0..m] = value[0..m];
+        deformed_.points[0 .. m] = value[0 .. m];
     }
 
     /**
@@ -228,4 +228,5 @@ public:
         base_.reset();
     }
 }
+
 mixin Register!(MeshDeformer, in_node_registry);

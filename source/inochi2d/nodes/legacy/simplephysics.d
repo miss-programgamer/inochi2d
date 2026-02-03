@@ -18,22 +18,23 @@ import std.algorithm.sorting;
 import std.exception;
 
 // Allow disabling legacy node.
-version(IN_NO_LEGACY) {} else:
+version (IN_NO_LEGACY) {
+} else:
 
-/**
+    /**
     Physics model to use for simple physics
 */
-enum PhysicsModel {
-    /**
+    enum PhysicsModel {
+        /**
         Rigid pendulum
     */
-    Pendulum = "pendulum",
+        Pendulum = "pendulum",
 
-    /**
+        /**
         Springy pendulum
     */
-    SpringPendulum = "spring_pendulum",
-}
+        SpringPendulum = "spring_pendulum",
+    }
 
 enum ParamMapMode {
     AngleLength = "angle_length",
@@ -128,18 +129,18 @@ protected:
         vec2 ddBob = force;
 
         vec2 dBobRot = vec2(
-            dBob.x * offPosNorm.y + dBob.y * offPosNorm.x,
-            dBob.y * offPosNorm.y - dBob.x * offPosNorm.x,
+                dBob.x * offPosNorm.y + dBob.y * offPosNorm.x,
+                dBob.y * offPosNorm.y - dBob.x * offPosNorm.x,
         );
 
         vec2 ddBobRot = -vec2(
-            dBobRot.x * driver.finalAngleDamping * critDampAngle,
-            dBobRot.y * driver.finalLengthDamping * critDampLength,
+                dBobRot.x * driver.finalAngleDamping * critDampAngle,
+                dBobRot.y * driver.finalLengthDamping * critDampLength,
         );
 
         vec2 ddBobDamping = vec2(
-            ddBobRot.x * offPosNorm.y - dBobRot.y * offPosNorm.x,
-            ddBobRot.y * offPosNorm.y + dBobRot.x * offPosNorm.x,
+                ddBobRot.x * offPosNorm.y - dBobRot.y * offPosNorm.x,
+                ddBobRot.y * offPosNorm.y + dBobRot.x * offPosNorm.x,
         );
 
         ddBob += ddBobDamping;
@@ -210,7 +211,7 @@ protected:
             recursive = Whether to recurse through children.
     */
     override
-    void onSerialize(ref DataNode object, bool recursive=true) {
+    void onSerialize(ref DataNode object, bool recursive = true) {
         super.onSerialize(object, recursive);
 
         auto target = paramRef.toString();
@@ -348,7 +349,7 @@ public:
     /**
         The affected parameters of the driver.
     */
-    @property Parameter[] affectedParameters() @nogc => (&param_)[0..1];
+    @property Parameter[] affectedParameters() @nogc => (&param_)[0 .. 1];
 
     /**
         Physics scale.
@@ -418,10 +419,10 @@ public:
     */
     final
     bool affectsParameter(ref Parameter param) {
-        foreach(ref Parameter p; this.affectedParameters) {
+        foreach (ref Parameter p; this.affectedParameters) {
             if (p.guid == param.guid)
                 return true;
-        } 
+        }
         return false;
     }
 
@@ -448,14 +449,14 @@ public:
     }
 
     void updateInputs() {
-        auto anchorPos = localOnly ? 
-            (vec4(localTransform.translation, 1)) : 
-            (transform.matrix * vec4(0, 0, 0, 1));
+        auto anchorPos = localOnly ?
+            (vec4(localTransform.translation, 1)) : (transform.matrix * vec4(0, 0, 0, 1));
         anchor = vec2(anchorPos.x, anchorPos.y);
     }
 
     void updateOutputs() {
-        if (param is null) return;
+        if (param is null)
+            return;
 
         vec2 oscale = this.finalOutputScale;
 
@@ -464,9 +465,8 @@ public:
 
         // Transform the physics output back into local space.
         // The origin here is the anchor. This gives us the local angle.
-        auto localPos4 = localOnly ? 
-            vec4(output.x, output.y, 0, 1) : 
-            (transform.matrix.inverse * vec4(output.x, output.y, 0, 1));
+        auto localPos4 = localOnly ?
+            vec4(output.x, output.y, 0, 1) : (transform.matrix.inverse * vec4(output.x, output.y, 0, 1));
         vec2 localAngle = vec2(localPos4.x, localPos4.y);
         localAngle.normalize();
 
@@ -475,29 +475,29 @@ public:
 
         vec2 paramVal = vec2.zero;
         switch (mapMode) {
-            case ParamMapMode.XY:
-                auto localPosNorm = localAngle * relLength;
-                paramVal = localPosNorm - vec2(0, 1);
-                paramVal.y = -paramVal.y; // Y goes up for params
-                break;
-            case ParamMapMode.AngleLength:
-                float a = atan2(-localAngle.x, localAngle.y) / PI;
-                paramVal = vec2(a, relLength);
-                break;
-            case ParamMapMode.YX:
-                auto localPosNorm = localAngle * relLength;
-                paramVal = localPosNorm - vec2(0, 1);
-                paramVal.y = -paramVal.y; // Y goes up for params
-                paramVal = vec2(paramVal.y, paramVal.x);
-                break;
-            case ParamMapMode.LengthAngle:
-                float a = atan2(-localAngle.x, localAngle.y) / PI;
-                paramVal = vec2(relLength, a);
-                break;
-            default:
-                break;
+        case ParamMapMode.XY:
+            auto localPosNorm = localAngle * relLength;
+            paramVal = localPosNorm - vec2(0, 1);
+            paramVal.y = -paramVal.y; // Y goes up for params
+            break;
+        case ParamMapMode.AngleLength:
+            float a = atan2(-localAngle.x, localAngle.y) / PI;
+            paramVal = vec2(a, relLength);
+            break;
+        case ParamMapMode.YX:
+            auto localPosNorm = localAngle * relLength;
+            paramVal = localPosNorm - vec2(0, 1);
+            paramVal.y = -paramVal.y; // Y goes up for params
+            paramVal = vec2(paramVal.y, paramVal.x);
+            break;
+        case ParamMapMode.LengthAngle:
+            float a = atan2(-localAngle.x, localAngle.y) / PI;
+            paramVal = vec2(relLength, a);
+            break;
+        default:
+            break;
         }
-        
+
         __tmp__pushToParameter(param, paramVal, oscale);
     }
 
@@ -505,14 +505,14 @@ public:
         updateInputs();
 
         switch (modelType) {
-            case PhysicsModel.Pendulum:
-                system = nogc_new!Pendulum(this);
-                break;
-            case PhysicsModel.SpringPendulum:
-                system = nogc_new!SpringPendulum(this);
-                break;
-            default:
-                break;
+        case PhysicsModel.Pendulum:
+            system = nogc_new!Pendulum(this);
+            break;
+        case PhysicsModel.SpringPendulum:
+            system = nogc_new!SpringPendulum(this);
+            break;
+        default:
+            break;
         }
     }
 
@@ -529,20 +529,20 @@ public:
     */
     override
     bool hasProperty(string key) {
-        switch(key) {
-            case "gravity":
-            case "length":
-            case "frequency":
-            case "angleDamping":
-            case "lengthDamping":
-            case "outputScale.x":
-            case "outputScale.y":
-                return true;
-            default:
-                return super.hasProperty(key);
+        switch (key) {
+        case "gravity":
+        case "length":
+        case "frequency":
+        case "angleDamping":
+        case "lengthDamping":
+        case "outputScale.x":
+        case "outputScale.y":
+            return true;
+        default:
+            return super.hasProperty(key);
         }
     }
-    
+
     /**
         Gets the value of a given property.
 
@@ -554,15 +554,23 @@ public:
     */
     override
     float getProperty(string key) {
-        switch(key) {
-            case "gravity":         return offsetGravity;
-            case "length":          return offsetLength;
-            case "frequency":       return offsetFrequency;
-            case "angleDamping":    return offsetAngleDamping;
-            case "lengthDamping":   return offsetLengthDamping;
-            case "outputScale.x":   return offsetOutputScale.x;
-            case "outputScale.y":   return offsetOutputScale.y;
-            default:                return super.getProperty(key);
+        switch (key) {
+        case "gravity":
+            return offsetGravity;
+        case "length":
+            return offsetLength;
+        case "frequency":
+            return offsetFrequency;
+        case "angleDamping":
+            return offsetAngleDamping;
+        case "lengthDamping":
+            return offsetLengthDamping;
+        case "outputScale.x":
+            return offsetOutputScale.x;
+        case "outputScale.y":
+            return offsetOutputScale.y;
+        default:
+            return super.getProperty(key);
         }
     }
 
@@ -577,18 +585,18 @@ public:
     */
     override
     float getPropertyDefault(string key) {
-        switch(key) {
-            case "gravity":
-            case "frequency":
-            case "angleDamping":
-            case "lengthDamping":
-            case "outputScale.x":
-            case "outputScale.y":
-                return 1;
-            case "length":
-                return 0;
-            default:
-                return super.getPropertyDefault(key);
+        switch (key) {
+        case "gravity":
+        case "frequency":
+        case "angleDamping":
+        case "lengthDamping":
+        case "outputScale.x":
+        case "outputScale.y":
+            return 1;
+        case "length":
+            return 0;
+        default:
+            return super.getPropertyDefault(key);
         }
     }
 
@@ -601,31 +609,32 @@ public:
     */
     override
     void setProperty(string key, float value) {
-        switch(key) {
-            case "gravity":
-                offsetGravity *= value;
-                return;
-            case "length":
-                offsetLength += value;
-                return;
-            case "frequency":
-                offsetFrequency *= value;
-                return;
-            case "angleDamping":
-                offsetAngleDamping *= value;
-                return;
-            case "lengthDamping":
-                offsetLengthDamping *= value;
-                return;
-            case "outputScale.x":
-                offsetOutputScale.x *= value;
-                return;
-            case "outputScale.y":
-                offsetOutputScale.y *= value;
-                return;
-            default:
-                return super.setProperty(key, value);
+        switch (key) {
+        case "gravity":
+            offsetGravity *= value;
+            return;
+        case "length":
+            offsetLength += value;
+            return;
+        case "frequency":
+            offsetFrequency *= value;
+            return;
+        case "angleDamping":
+            offsetAngleDamping *= value;
+            return;
+        case "lengthDamping":
+            offsetLengthDamping *= value;
+            return;
+        case "outputScale.x":
+            offsetOutputScale.x *= value;
+            return;
+        case "outputScale.y":
+            offsetOutputScale.y *= value;
+            return;
+        default:
+            return super.setProperty(key, value);
         }
     }
 }
+
 mixin Register!(SimplePhysics, in_node_registry);

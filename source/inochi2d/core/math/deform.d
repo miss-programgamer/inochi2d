@@ -57,7 +57,6 @@ public:
                         replacing the original deformation.
     */
     void deform(size_t offset, vec2 deform, bool absolute = false);
-    
 
     /**
         Applies an offset to the IDeformable's transform.
@@ -89,19 +88,19 @@ struct Deformation {
 
     void update(vec2[] points) @trusted @nogc nothrow {
         vertexOffsets = vertexOffsets.nu_resize(points.length);
-        vertexOffsets[0..points.length] = points[0..$];
+        vertexOffsets[0 .. points.length] = points[0 .. $];
     }
 
     void clear(size_t length) @trusted @nogc nothrow {
         vertexOffsets = vertexOffsets.nu_resize(length);
-        vertexOffsets[0..$] = vec2.zero;
+        vertexOffsets[0 .. $] = vec2.zero;
     }
 
     Deformation opUnary(string op : "-")() @trusted nothrow {
         Deformation new_;
 
-            new_.vertexOffsets.length = vertexOffsets.length;
-        foreach(i; 0..vertexOffsets.length) {
+        new_.vertexOffsets.length = vertexOffsets.length;
+        foreach (i; 0 .. vertexOffsets.length) {
             new_.vertexOffsets[i] = -vertexOffsets[i];
         }
 
@@ -109,12 +108,12 @@ struct Deformation {
     }
 
     Deformation opBinary(string op : "*", T)(T other) @trusted @nogc nothrow {
-        return assumeNoThrowNoGC((Deformation self, T other) { 
+        return assumeNoThrowNoGC((Deformation self, T other) {
             static if (is(T == Deformation)) {
                 Deformation new_;
 
                 new_.vertexOffsets.length = self.vertexOffsets.length;
-                foreach(i; 0..self.vertexOffsets.length) {
+                foreach (i; 0 .. self.vertexOffsets.length) {
                     new_.vertexOffsets[i] = self.vertexOffsets[i] * other.vertexOffsets[i];
                 }
 
@@ -123,7 +122,7 @@ struct Deformation {
                 Deformation new_;
 
                 new_.vertexOffsets.length = self.vertexOffsets.length;
-                foreach(i; 0..self.vertexOffsets.length) {
+                foreach (i; 0 .. self.vertexOffsets.length) {
                     new_.vertexOffsets[i] = self.vertexOffsets[i] * other;
                 }
 
@@ -132,7 +131,7 @@ struct Deformation {
                 Deformation new_;
 
                 new_.vertexOffsets.length = self.vertexOffsets.length;
-                foreach(i; 0..self.vertexOffsets.length) {
+                foreach (i; 0 .. self.vertexOffsets.length) {
                     new_.vertexOffsets[i] = self.vertexOffsets[i] * other;
                 }
 
@@ -142,12 +141,12 @@ struct Deformation {
     }
 
     Deformation opBinaryRight(string op : "*", T)(T other) @trusted nothrow {
-        return assumeNoThrowNoGC((Deformation self, T other) { 
+        return assumeNoThrowNoGC((Deformation self, T other) {
             static if (is(T == Deformation)) {
                 Deformation new_;
 
                 new_.vertexOffsets.length = self.vertexOffsets.length;
-                foreach(i; 0..self.vertexOffsets.length) {
+                foreach (i; 0 .. self.vertexOffsets.length) {
                     new_.vertexOffsets[i] = other.vertexOffsets[i] * self.vertexOffsets[i];
                 }
 
@@ -156,7 +155,7 @@ struct Deformation {
                 Deformation new_;
 
                 new_.vertexOffsets.length = self.vertexOffsets.length;
-                foreach(i; 0..self.vertexOffsets.length) {
+                foreach (i; 0 .. self.vertexOffsets.length) {
                     new_.vertexOffsets[i] = other * self.vertexOffsets[i];
                 }
 
@@ -165,7 +164,7 @@ struct Deformation {
                 Deformation new_;
 
                 new_.vertexOffsets.length = self.vertexOffsets.length;
-                foreach(i; 0..self.vertexOffsets.length) {
+                foreach (i; 0 .. self.vertexOffsets.length) {
                     new_.vertexOffsets[i] = other * self.vertexOffsets[i];
                 }
 
@@ -175,12 +174,12 @@ struct Deformation {
     }
 
     Deformation opBinary(string op : "+", T)(T other) @trusted nothrow {
-        return assumeNoThrowNoGC((Deformation self, T other) { 
+        return assumeNoThrowNoGC((Deformation self, T other) {
             static if (is(T == Deformation)) {
                 Deformation new_;
 
                 new_.vertexOffsets.length = self.vertexOffsets.length;
-                foreach(i; 0..self.vertexOffsets.length) {
+                foreach (i; 0 .. self.vertexOffsets.length) {
                     new_.vertexOffsets[i] = self.vertexOffsets[i] + other.vertexOffsets[i];
                 }
 
@@ -189,7 +188,7 @@ struct Deformation {
                 Deformation new_;
 
                 new_.vertexOffsets.length = self.vertexOffsets.length;
-                foreach(i; 0..self.vertexOffsets.length) {
+                foreach (i; 0 .. self.vertexOffsets.length) {
                     new_.vertexOffsets[i] = self.vertexOffsets[i] + other;
                 }
 
@@ -198,7 +197,7 @@ struct Deformation {
                 Deformation new_;
 
                 new_.vertexOffsets.length = self.vertexOffsets.length;
-                foreach(i; 0..self.vertexOffsets.length) {
+                foreach (i; 0 .. self.vertexOffsets.length) {
                     new_.vertexOffsets[i] = self.vertexOffsets[i] + other;
                 }
 
@@ -208,12 +207,12 @@ struct Deformation {
     }
 
     Deformation opBinary(string op : "-", T)(T other) @trusted nothrow {
-        return assumeNoThrowNoGC((Deformation self, T other) { 
+        return assumeNoThrowNoGC((Deformation self, T other) {
             static if (is(T == Deformation)) {
                 Deformation new_;
 
                 new_.vertexOffsets.length = self.vertexOffsets.length;
-                foreach(i; 0..self.vertexOffsets.length) {
+                foreach (i; 0 .. self.vertexOffsets.length) {
                     new_.vertexOffsets[i] = self.vertexOffsets[i] - other.vertexOffsets[i];
                 }
 
@@ -222,7 +221,7 @@ struct Deformation {
                 Deformation new_;
 
                 new_.vertexOffsets.length = self.vertexOffsets.length;
-                foreach(i; 0..self.vertexOffsets.length) {
+                foreach (i; 0 .. self.vertexOffsets.length) {
                     new_.vertexOffsets[i] = self.vertexOffsets[i] - other;
                 }
 
@@ -231,7 +230,7 @@ struct Deformation {
                 Deformation new_;
 
                 new_.vertexOffsets.length = self.vertexOffsets.length;
-                foreach(i; 0..self.vertexOffsets.length) {
+                foreach (i; 0 .. self.vertexOffsets.length) {
                     new_.vertexOffsets[i] = self.vertexOffsets[i] - other;
                 }
 
@@ -241,15 +240,15 @@ struct Deformation {
     }
 
     void onSerialize(ref DataNode data) @nogc {
-        foreach(offset; vertexOffsets) {
+        foreach (offset; vertexOffsets) {
             data ~= offset.serialize();
         }
     }
 
     void onDeserialize(ref DataNode data) @nogc {
-        this.vertexOffsets = nu_malloca!vec2(data.length/2);
-        foreach(i, ref element; data.array) {
-            this.vertexOffsets[i/2] = element.deserialize!vec2();
+        this.vertexOffsets = nu_malloca!vec2(data.length / 2);
+        foreach (i, ref element; data.array) {
+            this.vertexOffsets[i / 2] = element.deserialize!vec2();
         }
     }
 }

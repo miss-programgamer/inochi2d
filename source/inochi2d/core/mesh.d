@@ -14,8 +14,10 @@ import inochi2d.core.math.trig;
 import numem;
 import inmath;
 
-version(IN_VEC3_POSITION) alias vtx_t = vec3;
-else alias vtx_t = vec2;
+version (IN_VEC3_POSITION)
+    alias vtx_t = vec3;
+else
+    alias vtx_t = vec2;
 
 /**
     Vertex Data that gets submitted to the GPU.
@@ -34,26 +36,26 @@ struct VtxData {
 class Mesh : NuRefCounted {
 private:
 @nogc:
-    VtxData[]   vtx_;
-    uint[]      idx_;
-    vec2[]      vto_;
+    VtxData[] vtx_;
+    uint[] idx_;
+    vec2[] vto_;
 
 public:
 
     /**
         The points of the vertices of the mesh.
     */
-    @property vec2[] points() => vto_[0..$];
+    @property vec2[] points() => vto_[0 .. $];
 
     /**
         The vertex data stored in the mesh.
     */
-    @property VtxData[] vertices() => vtx_[0..$];
+    @property VtxData[] vertices() => vtx_[0 .. $];
 
     /**
         The index data stored in the mesh.
     */
-    @property uint[] indices() => idx_[0..$];
+    @property uint[] indices() => idx_[0 .. $];
 
     /**
         How many vertices are in the mesh.
@@ -68,7 +70,7 @@ public:
     /**
         How many triangles are in the mesh.
     */
-    @property uint triangleCount() => cast(uint)(idx_.length/3);
+    @property uint triangleCount() => cast(uint)(idx_.length / 3);
 
     /**
         Bounds of the deformed mesh.
@@ -85,7 +87,8 @@ public:
     /**
         Creates an empty mesh.
     */
-    this() { }
+    this() {
+    }
 
     /**
         Creates a mesh from a encoded Inochi2D MeshData
@@ -96,8 +99,8 @@ public:
         this.idx_ = meshData.indices.nu_dup();
         this.vto_ = meshData.vertices.nu_dup();
 
-        foreach(i; 0..vtx_.length) {
-            version(IN_VEC3_POSITION) {
+        foreach (i; 0 .. vtx_.length) {
+            version (IN_VEC3_POSITION) {
                 this.vtx_[i] = VtxData(vec3(this.vto_[i], 0), meshData.uvs[i]);
             } else {
                 this.vtx_[i] = VtxData(this.vto_[i], meshData.uvs[i]);
@@ -137,13 +140,13 @@ public:
             The requested triangle.
     */
     Triangle getTriangle(uint offset) {
-        if (offset > idx_.length/3)
+        if (offset > idx_.length / 3)
             return Triangle.init;
-        
+
         return Triangle(
-            vto_[idx_[(offset*3)+0]].xy, 
-            vto_[idx_[(offset*3)+1]].xy, 
-            vto_[idx_[(offset*3)+2]].xy
+                vto_[idx_[(offset * 3) + 0]].xy,
+                vto_[idx_[(offset * 3) + 1]].xy,
+                vto_[idx_[(offset * 3) + 2]].xy
         );
     }
 
@@ -156,11 +159,11 @@ public:
     */
     Triangle[] getTriangles() {
         Triangle[] tris = nu_malloca!Triangle(triangleCount);
-        foreach(i; 0..tris.length) {
+        foreach (i; 0 .. tris.length) {
             tris[i] = Triangle(
-                vto_[idx_[(i*3)+0]].xy, 
-                vto_[idx_[(i*3)+1]].xy, 
-                vto_[idx_[(i*3)+2]].xy
+                    vto_[idx_[(i * 3) + 0]].xy,
+                    vto_[idx_[(i * 3) + 1]].xy,
+                    vto_[idx_[(i * 3) + 2]].xy
             );
         }
         return tris;
@@ -226,7 +229,7 @@ public:
     /**
         How many triangles are in the mesh.
     */
-    @property uint triangleCount() => cast(uint)(parent_.idx_.length/3);
+    @property uint triangleCount() => cast(uint)(parent_.idx_.length / 3);
 
     /**
         Bounds of the deformed mesh.
@@ -252,7 +255,8 @@ public:
     /**
         Constructs a new empty DeformedMesh
     */
-    this() { }
+    this() {
+    }
 
     /**
         Deform the mesh by the given amount.
@@ -261,7 +265,7 @@ public:
             by =        The deltas to deform the mesh by
     */
     void deform(vec2[] by) {
-        foreach(i; 0..delta_.length) {
+        foreach (i; 0 .. delta_.length) {
             delta_[i] += by[i];
 
             deformed_[i].vtx.x = delta_[i].x;
@@ -293,7 +297,7 @@ public:
 
         // NOTE: SIMD is slower in this instance due to how multiple arrays
         // are involved.
-        foreach(i; 0..delta_.length) {
+        foreach (i; 0 .. delta_.length) {
             delta_[i] += (matrix * vec4(delta_[i].xy, 0, 1)).xy;
 
             deformed_[i].vtx.x = delta_[i].x;
@@ -310,11 +314,11 @@ public:
     */
     Triangle[] getTriangles() {
         Triangle[] tris = nu_malloca!Triangle(triangleCount);
-        foreach(i; 0..tris.length) {
+        foreach (i; 0 .. tris.length) {
             tris[i] = Triangle(
-                delta_[parent_.idx_[(i*3)+0]].xy, 
-                delta_[parent_.idx_[(i*3)+1]].xy, 
-                delta_[parent_.idx_[(i*3)+2]].xy
+                    delta_[parent_.idx_[(i * 3) + 0]].xy,
+                    delta_[parent_.idx_[(i * 3) + 1]].xy,
+                    delta_[parent_.idx_[(i * 3) + 2]].xy
             );
         }
         return tris;
@@ -324,8 +328,8 @@ public:
         Resets the deformation.
     */
     void reset() {
-        this.deformed_[0..$] = parent_.vtx_[0..$];
-        this.delta_[0..$] = parent_.vto_[0..$];
+        this.deformed_[0 .. $] = parent_.vtx_[0 .. $];
+        this.delta_[0 .. $] = parent_.vto_[0 .. $];
     }
 }
 
@@ -390,7 +394,7 @@ struct MeshData {
         this.indices = mesh.indices.nu_dup;
         this.vertices = nu_malloca!vec2(mesh.vertices.length);
         this.uvs = nu_malloca!vec2(mesh.vertices.length);
-        foreach(i; 0..mesh.vertices.length) {
+        foreach (i; 0 .. mesh.vertices.length) {
             this.vertices[i] = mesh.vertices[i].vtx.xy;
             this.uvs[i] = mesh.vertices[i].uv;
         }
@@ -405,7 +409,7 @@ struct MeshData {
 
     /// Deserialization handler
     void onDeserialize(ref DataNode object) {
-        if (object.isNull) 
+        if (object.isNull)
             return;
 
         object.tryGetRef(vertices, "verts");
@@ -414,7 +418,7 @@ struct MeshData {
 
         vec2 origin = object.tryGet!vec2("origin");
         if (origin.isFinite) {
-            foreach(i; 0..vertices.length) {
+            foreach (i; 0 .. vertices.length) {
                 vertices[i] -= origin;
             }
         }
@@ -434,9 +438,9 @@ rect getBounds(T)(T[] mesh) @nogc nothrow pure if (isVector!T) {
     vec2 minp = vec2(float.max, float.max);
     vec2 maxp = vec2(-float.max, -float.max);
 
-    foreach(i; 0..mesh.length) {
+    foreach (i; 0 .. mesh.length) {
         minp = vec2(min(minp.x, mesh[i].x), min(minp.y, mesh[i].y));
         maxp = vec2(max(maxp.x, mesh[i].x), max(maxp.y, mesh[i].y));
     }
-    return rect(minp.x, minp.y, maxp.x-minp.x, maxp.y-minp.y);
+    return rect(minp.x, minp.y, maxp.x - minp.x, maxp.y - minp.y);
 }

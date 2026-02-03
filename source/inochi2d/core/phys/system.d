@@ -32,12 +32,12 @@ private:
 
     /// Helper that resizes all of the temporary arrays.
     void resize(size_t length) {
-        kstate  = kstate.nu_resize(length);
-        k0      = k0.nu_resize(length);
-        k1      = k1.nu_resize(length);
-        k2      = k2.nu_resize(length);
-        k3      = k3.nu_resize(length);
-        k4      = k4.nu_resize(length);
+        kstate = kstate.nu_resize(length);
+        k0 = k0.nu_resize(length);
+        k1 = k1.nu_resize(length);
+        k2 = k2.nu_resize(length);
+        k3 = k3.nu_resize(length);
+        k4 = k4.nu_resize(length);
     }
 
 protected:
@@ -86,13 +86,13 @@ protected:
     }
 
     float[] getState() {
-        foreach(idx, ptr; refs)
+        foreach (idx, ptr; refs)
             kstate[idx] = *ptr;
         return kstate;
     }
 
     void setState(float[] vals) {
-        foreach(idx, ptr; refs) {
+        foreach (idx, ptr; refs) {
             *ptr = vals[idx];
         }
     }
@@ -104,7 +104,7 @@ protected:
 
 public:
 
-    ~this() {
+     ~this() {
         variableMap.clearContents();
         refs.clear();
 
@@ -122,31 +122,31 @@ public:
     */
     void tick(float h) {
         float[] cur = getState();
-        k0[0..$] = 0;
+        k0[0 .. $] = 0;
 
         eval(t);
-        k1[0..$] = k0[0..$];
+        k1[0 .. $] = k0[0 .. $];
 
-        foreach(i; 0..cur.length)
+        foreach (i; 0 .. cur.length)
             *refs[i] = cur[i] + h * k1[i] / 2f;
         eval(t + h / 2f);
-        k2[0..$] = k0[0..$];
+        k2[0 .. $] = k0[0 .. $];
 
-        foreach(i; 0..cur.length)
+        foreach (i; 0 .. cur.length)
             *refs[i] = cur[i] + h * k2[i] / 2f;
         eval(t + h / 2f);
-        k3[0..$] = k0[0..$];
+        k3[0 .. $] = k0[0 .. $];
 
-        foreach(i; 0..cur.length)
+        foreach (i; 0 .. cur.length)
             *refs[i] = cur[i] + h * k3[i];
         eval(t + h);
-        k4[0..$] = k0[0..$];
+        k4[0 .. $] = k0[0 .. $];
 
-        foreach(i; 0..cur.length) {
+        foreach (i; 0 .. cur.length) {
             *refs[i] = cur[i] + h * (k1[i] + 2 * k2[i] + 2 * k3[i] + k4[i]) / 6f;
             if (!isFinite(*refs[i])) {
                 // Simulation failed, revert
-                foreach(j; 0..cur.length)
+                foreach (j; 0 .. cur.length)
                     *refs[j] = cur[j];
                 break;
             }
@@ -160,4 +160,3 @@ public:
     */
     abstract void updateAnchor();
 }
-

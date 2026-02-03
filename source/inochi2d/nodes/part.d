@@ -76,7 +76,7 @@ protected:
         MeshData data = MeshData(mesh_);
         object["mesh"] = data.serialize();
         object["textures"] = DataNode.createArray();
-        foreach(ref texture; textures) {
+        foreach (ref texture; textures) {
             if (texture) {
                 ptrdiff_t index = puppet.getTextureSlotIndexFor(texture);
                 object["textures"].array ~= DataNode(index >= 0 ? index : NO_TEXTURE);
@@ -107,10 +107,11 @@ protected:
         this.base_ = nogc_new!DeformedMesh();
         this.mesh = Mesh.fromMeshData(object.tryGet!MeshData("mesh"));
         if ("textures" in object && object["textures"].isArray()) {
-            foreach(i, ref DataNode element; object["textures"].array) {
+            foreach (i, ref DataNode element; object["textures"].array) {
 
                 uint textureId = element.tryGet!uint(NO_TEXTURE);
-                if (textureId == NO_TEXTURE) continue;
+                if (textureId == NO_TEXTURE)
+                    continue;
 
                 // TODO: Abstract this to properly handle refcounts.
                 this.textures[i] = puppet.textureCache.get(textureId);
@@ -118,13 +119,13 @@ protected:
                     this.textures[i].retain();
             }
         }
-        
+
         object.tryGetRef(opacity, "opacity");
         object.tryGetRef(tint, "tint");
         object.tryGetRef(screenTint, "screenTint");
         object.tryGetRef(tint, "tint");
         object.tryGetRef(emissionStrength, "emissionStrength");
-        
+
         if ("blend_mode" in object && object["blend_mode"].isNumber)
             blendingMode = cast(BlendMode)object.tryGet!uint("blend_mode", blendingMode.normal);
         else
@@ -197,14 +198,14 @@ protected:
             return;
 
         PartVars vars = PartVars(
-            tint*offsetTint,
-            screenTint*offsetScreenTint,
-            opacity*offsetOpacity,
-            emissionStrength*offsetEmissionStrength
+                tint * offsetTint,
+                screenTint * offsetScreenTint,
+                opacity * offsetOpacity,
+                emissionStrength * offsetEmissionStrength
         );
-        
+
         if (masks.length > 0) {
-            foreach(ref mask; masks) {
+            foreach (ref mask; masks) {
                 if (mask.maskSrc)
                     mask.maskSrc.onDraw(delta, drawList, mask.mode);
             }
@@ -234,7 +235,7 @@ public:
     final @property void mesh(Mesh value) @nogc {
         if (value is mesh_)
             return;
-        
+
         if (mesh_)
             mesh_.release();
 
@@ -306,7 +307,7 @@ public:
     ~this() {
         mesh_.release();
         nogc_delete(deformed_);
-        foreach(texture; textures) {
+        foreach (texture; textures) {
             if (texture)
                 texture.release();
         }
@@ -331,7 +332,7 @@ public:
     */
     this(MeshData data, GUID guid, Node parent = null) {
         super(guid, parent);
-        
+
         this.deformed_ = nogc_new!DeformedMesh();
         this.base_ = nogc_new!DeformedMesh();
         this.mesh = Mesh.fromMeshData(data);
@@ -349,8 +350,9 @@ public:
     */
     this(MeshData data, Texture[] textures, GUID guid, Node parent = null) {
         this(data, guid, parent);
-        foreach(i; 0..TextureUsage.COUNT) {
-            if (i >= textures.length) break;
+        foreach (i; 0 .. TextureUsage.COUNT) {
+            if (i >= textures.length)
+                break;
             this.textures[i] = textures[i];
         }
     }
@@ -361,7 +363,7 @@ public:
     override
     void resetDeform() {
         deformed_.reset();
-        
+
         base_.reset();
         base_.pushMatrix(baseTransform.matrix);
     }
@@ -378,7 +380,7 @@ public:
     void deform(vec2[] deformed, bool absolute = false) {
         deformed_.deform(deformed);
     }
-    
+
     /**
         Deforms a single vertex in the IDeformable
 
@@ -416,20 +418,21 @@ public:
     */
     override
     bool hasProperty(string key) {
-        if (super.hasProperty(key)) return true;
+        if (super.hasProperty(key))
+            return true;
 
-        switch(key) {
-            case "opacity":
-            case "tint.r":
-            case "tint.g":
-            case "tint.b":
-            case "screenTint.r":
-            case "screenTint.g":
-            case "screenTint.b":
-            case "emissionStrength":
-                return true;
-            default:
-                return false;
+        switch (key) {
+        case "opacity":
+        case "tint.r":
+        case "tint.g":
+        case "tint.b":
+        case "screenTint.r":
+        case "screenTint.g":
+        case "screenTint.b":
+        case "emissionStrength":
+            return true;
+        default:
+            return false;
         }
     }
 
@@ -444,16 +447,25 @@ public:
     */
     override
     float getProperty(string key) {
-        switch(key) {
-            case "opacity":             return offsetOpacity;
-            case "tint.r":              return offsetTint.x;
-            case "tint.g":              return offsetTint.y;
-            case "tint.b":              return offsetTint.z;
-            case "screenTint.r":        return offsetScreenTint.x;
-            case "screenTint.g":        return offsetScreenTint.y;
-            case "screenTint.b":        return offsetScreenTint.z;
-            case "emissionStrength":    return offsetEmissionStrength;
-            default:                    return super.getProperty(key);
+        switch (key) {
+        case "opacity":
+            return offsetOpacity;
+        case "tint.r":
+            return offsetTint.x;
+        case "tint.g":
+            return offsetTint.y;
+        case "tint.b":
+            return offsetTint.z;
+        case "screenTint.r":
+            return offsetScreenTint.x;
+        case "screenTint.g":
+            return offsetScreenTint.y;
+        case "screenTint.b":
+            return offsetScreenTint.z;
+        case "emissionStrength":
+            return offsetEmissionStrength;
+        default:
+            return super.getProperty(key);
         }
     }
 
@@ -468,22 +480,22 @@ public:
     */
     override
     float getPropertyDefault(string key) {
-        switch(key) {
-            case "alphaThreshold":
-                return 0;
-            case "opacity":
-            case "tint.r":
-            case "tint.g":
-            case "tint.b":
-                return 1;
-            case "screenTint.r":
-            case "screenTint.g":
-            case "screenTint.b":
-                return 0;
-            case "emissionStrength":
-                return 1;
-            default:
-                return super.getPropertyDefault(key);
+        switch (key) {
+        case "alphaThreshold":
+            return 0;
+        case "opacity":
+        case "tint.r":
+        case "tint.g":
+        case "tint.b":
+            return 1;
+        case "screenTint.r":
+        case "screenTint.g":
+        case "screenTint.b":
+            return 0;
+        case "emissionStrength":
+            return 1;
+        default:
+            return super.getPropertyDefault(key);
         }
     }
 
@@ -496,34 +508,35 @@ public:
     */
     override
     void setProperty(string key, float value) {
-        switch(key) {
-            case "opacity":
-                offsetOpacity *= value;
-                return;
-            case "tint.r":
-                offsetTint.x *= value;
-                return;
-            case "tint.g":
-                offsetTint.y *= value;
-                return;
-            case "tint.b":
-                offsetTint.z *= value;
-                return;
-            case "screenTint.r":
-                offsetScreenTint.x += value;
-                return;
-            case "screenTint.g":
-                offsetScreenTint.y += value;
-                return;
-            case "screenTint.b":
-                offsetScreenTint.z += value;
-                return;
-            case "emissionStrength":
-                offsetEmissionStrength += value;
-                return;
-            default:
-                return super.setProperty(key, value);
+        switch (key) {
+        case "opacity":
+            offsetOpacity *= value;
+            return;
+        case "tint.r":
+            offsetTint.x *= value;
+            return;
+        case "tint.g":
+            offsetTint.y *= value;
+            return;
+        case "tint.b":
+            offsetTint.z *= value;
+            return;
+        case "screenTint.r":
+            offsetScreenTint.x += value;
+            return;
+        case "screenTint.g":
+            offsetScreenTint.y += value;
+            return;
+        case "screenTint.b":
+            offsetScreenTint.z += value;
+            return;
+        case "emissionStrength":
+            offsetEmissionStrength += value;
+            return;
+        default:
+            return super.setProperty(key, value);
         }
     }
 }
+
 mixin Register!(Part, in_node_registry);

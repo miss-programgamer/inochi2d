@@ -3,7 +3,6 @@ import inochi2d.nodes.part;
 import inochi2d.nodes;
 import inochi2d.core;
 
-
 /**
     Parts which contain spritesheet animation
 */
@@ -11,4 +10,5 @@ import inochi2d.core;
 class AnimatedPart : Part {
 
 }
+
 mixin Register!(AnimatedPart, in_node_registry);
