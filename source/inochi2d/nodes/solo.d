@@ -21,45 +21,46 @@ import numem;
 class Solo : Visual {
 private:
 @nogc:
+    uint lastActiveLayer_;
     uint activeLayer_;
-    Visual[] visuals_;
 
-    /**
-        Changes the active layer.
-    */
-    void changeLayer(uint activeLayer) nothrow {
-        if (children.length > 0) {
-            this.activeLayer_ = clamp(activeLayer, 0, cast(uint)children.length);
-            findVisuals(children[activeLayer_], visuals_);
-        } else {
-            if (visuals_) {
-                nu_free(visuals_.ptr);
-                visuals_ = null;
-            }
-        }
+    void changeLayer(uint value) @nogc nothrow {
+        this.lastActiveLayer_ = clamp(activeLayer_, 0, cast(uint)children.length);
+        this.activeLayer_ = clamp(cast(uint)value, 0, cast(uint)children.length);
     }
 
 protected:
 
     /**
-        Called when the node is to be redrawn.
+        Called during the early update phase of a new frame.
         
         Params:
-            delta =     Time since the last frame.
             drawList =  The drawlist for the active scene.
-            mode =      The masking mode to draw with.
     */
     override
-    void onDraw(float delta, DrawList drawList, MaskingMode mode) {
-        if (visuals_.length > 0) {
-            sortNodes(visuals_);
+    void onPreUpdate(DrawList drawList) {
 
-            foreach(visual; visuals_) {
-                if (!visual.enabled)
-                    continue;
+        // NOTE:    If we changed the active layer, force the puppet to rescan its visuals
+        //          hirearchy.
+        //          We do this since we want the Solo's hirearchy to blend
+        //          with the outer hirearchy sorting wise.
+        if (lastActiveLayer_ != activeLayer_)
+            puppet.rescanNodes();
+    }
 
-                visual.draw(delta, drawList);
-            }
+    /**
+        Requests that the list gather sub-visuals to be rendered, if applicable.
+
+        Params:
+            visuals =           The list to write to, the list may be resized by the
+                                implementation.
+            recurseDelegates =  Whether to recurse through delegate visuals.
+            append =            Whether to append to the visuals list.
+    */
+    override
+    void onDelegateFindVisuals(ref Visual[] visuals, bool recurseDelegates, bool append) {
+        if (children.length > 0) {
+            .findVisuals(children[activeLayer_], visuals, recurseDelegates, false, append);
         }
     }
 

@@ -775,61 +775,14 @@ public:
 mixin Register!(Node, in_node_registry);
 
 /**
-    Finds visuals that are within the hirearchy of the given node.
-
-    Params:
-        root =              The root node to start looking from
-        list =              The list to write to, the list may be resized by the
-                            implementation.
-        recurseDelegates =  Whether to recurse through delegate visuals.
-        sort =              Whether to sort the list of visuals.
-*/
-void findVisuals(Node root, ref Visual[] list, bool recurseDelegates = false, bool sort = true) @nogc nothrow {
-    static void findVisualsImpl(Node node, ref Visual[] list, bool recurseDelegates = false) @nogc nothrow {
-        if (!node)
-            return;
-
-        if (auto visual = cast(Visual)node) {
-            if (!visual.enabled)
-                return;
-
-            list = list.nu_resize(list.length + 1);
-            list[$ - 1] = visual;
-
-            if (!visual.isDelegated || recurseDelegates) {
-                foreach (child; node.children) {
-                    findVisualsImpl(child, list, recurseDelegates);
-                }
-            }
-        } else {
-
-            // Non-part nodes just need to be recursed through,
-            // they don't draw anything.
-            foreach (child; node.children) {
-                findVisualsImpl(child, list, recurseDelegates);
-            }
-        }
-    }
-
-    if (list) {
-        nu_free(list.ptr);
-        list = null;
-    }
-
-    findVisualsImpl(root, list, recurseDelegates);
-    if (sort)
-        sortNodes(list);
-}
-
-/**
     Finds all nodes of the given type (and subtypes) in the node tree.
 
     Params:
         root =  The root node to start searching from.
         list =  The list to write the results to.
 */
-void findNodes(T)(Node root, ref T[] list) @nogc nothrow if (is(T : Node)) {
-    static void findNodesImpl(Node node, ref T[] list) @nogc nothrow {
+void findNodes(T)(Node root, ref T[] list) @nogc if (is(T : Node)) {
+    static void findNodesImpl(Node node, ref T[] list) @nogc {
         if (!node)
             return;
 
@@ -844,12 +797,8 @@ void findNodes(T)(Node root, ref T[] list) @nogc nothrow if (is(T : Node)) {
             findNodesImpl(child, list);
         }
     }
-
-    if (list) {
-        nu_free(list.ptr);
-        list = null;
-    }
-
+    
+    nu_freea(list);
     findNodesImpl(root, list);
 }
 

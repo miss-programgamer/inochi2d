@@ -113,6 +113,17 @@ protected:
         this.updateCounts();
     }
 
+    /**
+        Callback for when the Visual is being requested to find its
+        sub-visuals.
+
+        Params:
+            visuals = The array to append the visuals to.
+            recurseDelegates =  Whether to recurse through delegate visuals.
+            append =            Whether to append to the visuals list.
+    */
+    void onDelegateFindVisuals(ref Visual[] visuals, bool recurseDelegates, bool append) { }
+
 public:
 
     /**
@@ -197,6 +208,19 @@ public:
         }
         return -1;
     }
+
+    /**
+        Requests that the list gather sub-visuals to be rendered, if applicable.
+
+        Params:
+            visuals =           The list to write to, the list may be resized by the
+                                implementation.
+            recurseDelegates =  Whether to recurse through delegate visuals.
+            append =            Whether to append to the visuals list.
+    */
+    void findVisuals(ref Visual[] visuals, bool recurseDelegates = false, bool append = false) {
+        this.onDelegateFindVisuals(visuals, recurseDelegates, append);
+    }
 }
 
 mixin Register!(Visual, in_node_registry);
@@ -226,4 +250,53 @@ public:
         maskSrcGUID = object.tryGetGUID("source", "source");
         mode = object.tryGet!string("mode", null).toMaskingMode;
     }
+}
+
+/**
+    Finds visuals that are within the hirearchy of the given node.
+
+    Params:
+        root =              The root node to start looking from
+        visuals =           The list to write to, the list may be resized by the
+                            implementation.
+        recurseDelegates =  Whether to recurse through delegate visuals.
+        sort =              Whether to sort the list of visuals.
+        append =            Whether to append to the visuals list.
+*/
+void findVisuals(Node root, ref Visual[] visuals, bool recurseDelegates = false, bool sort = true, bool append = false) @nogc {
+    static void findVisualsImpl(Node node, ref Visual[] visuals, bool recurseDelegates = false) @nogc {
+        if (!node)
+            return;
+
+        if (auto visual = cast(Visual)node) {
+            if (!visual.enabled)
+                return;
+
+            visuals = visuals.nu_resize(visuals.length + 1);
+            visuals[$ - 1] = visual;
+
+            if (!visual.isDelegated || recurseDelegates) {
+                foreach (child; node.children) {
+                    findVisualsImpl(child, visuals, recurseDelegates);
+                }
+            }
+
+            if (visual.isDelegated)
+                visual.findVisuals(visuals, recurseDelegates, true);
+        } else {
+
+            // Non-part nodes just need to be recursed through,
+            // they don't draw anything.
+            foreach (child; node.children) {
+                findVisualsImpl(child, visuals, recurseDelegates);
+            }
+        }
+    }
+
+    if (!append)
+        nu_freea(visuals);
+    
+    findVisualsImpl(root, visuals, recurseDelegates);
+    if (sort)
+        sortNodes(visuals);
 }

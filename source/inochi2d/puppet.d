@@ -154,10 +154,6 @@ private:
         }
     }
 
-    void resort() {
-        sortNodes(visuals_);
-    }
-
     Node findNode(Node n, string name) @nogc {
 
         // Name matches!
@@ -561,7 +557,7 @@ public:
         Draws the puppet
     */
     final void draw(float delta) {
-        this.resort();
+        sortNodes(visuals_);
 
         foreach (visual; visuals_) {
             if (!visual.enabled)
