@@ -30,6 +30,7 @@ align(vec4.sizeof):
 @TypeId("Composite", 0x0301)
 class Composite : Visual {
 private:
+@nogc:
     DrawListAlloc* ssDrawList_;
     Visual[] visuals_;
 
@@ -39,11 +40,17 @@ private:
     float offsetOpacity = 1;
     vec3 offsetTint = vec3(0);
     vec3 offsetScreenTint = vec3(0);
-
 protected:
 
+    /**
+        Serializes this node to a DataNode.
+
+        Params:
+            object =    The DataNode to serialize to.
+            recursive = Whether to recurse through children.
+    */
     override
-    void onSerialize(ref DataNode object, bool recursive = true) @nogc {
+    void onSerialize(ref DataNode object, bool recursive = true) {
         super.onSerialize(object, recursive);
         object["blend_mode"] = cast(uint)blendingMode;
         object["tint"] = tint.serialize();
@@ -52,8 +59,14 @@ protected:
         object["masks"] = masks.serialize();
     }
 
+    /**
+        Deserializes this node from a DataNode.
+
+        Params:
+            object = The DataNode to deserialize from.
+    */
     override
-    void onDeserialize(ref DataNode object) @nogc {
+    void onDeserialize(ref DataNode object) {
         super.onDeserialize(object);
 
         object.tryGetRef(opacity, "opacity");
@@ -65,6 +78,14 @@ protected:
             blendingMode = cast(BlendMode)object.tryGet!uint("blend_mode", blendingMode.normal);
         else
             blendingMode = object.tryGet!string("blend_mode", "Normal").toBlendMode();
+    }
+
+    /**
+        Called when the node is to finalize its deserialization from disk.
+    */
+    override
+    void onFinalize() {
+        this.notifyVisualsChanged();
     }
 
     /**
@@ -140,6 +161,20 @@ protected:
         drawList.setDrawState(DrawState.compositeBlit);
         drawList.setBlending(blendingMode);
         drawList.next();
+    }
+
+    /**
+        Requests that the list gather sub-visuals to be rendered, if applicable.
+
+        Params:
+            visuals =           The list to write to, the list may be resized by the
+                                implementation.
+            recurseDelegates =  Whether to recurse through delegate visuals.
+            append =            Whether to append to the visuals list.
+    */
+    override
+    void onDelegateFindVisuals(ref Visual[] visuals, bool recurseDelegates, bool append) {
+        this.notifyVisualsChanged();
     }
 
 public:
@@ -316,10 +351,12 @@ public:
     }
 
     /**
-        Scans for parts to render
+        Notifies the composite that the visuals have changed and
+        that it should re-index them.
     */
-    void scanParts() {
-        this.findVisuals(visuals_);
+    void notifyVisualsChanged() {
+        .findVisuals(this, visuals_, true, false, false);
+        sortNodes(visuals_);
     }
 }
 
