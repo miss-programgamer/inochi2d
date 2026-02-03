@@ -31,7 +31,7 @@ align(vec4.sizeof):
 class Composite : Visual {
 private:
     DrawListAlloc* ssDrawList_;
-    Visual[] visible_;
+    Visual[] visuals_;
 
     //
     //      PARAMETER OFFSETS
@@ -110,7 +110,7 @@ protected:
     */
     override
     void onDraw(float delta, DrawList drawList, MaskingMode mode) {
-        if (visible_.length == 0)
+        if (visuals_.length == 0)
             return;
 
         CompositeVars compositeVars = CompositeVars(
@@ -119,11 +119,11 @@ protected:
                 opacity * offsetOpacity
         );
 
-        visible_.sortNodes();
+        visuals_.sortNodes();
 
         // Push sub render area.
         drawList.beginComposite();
-        foreach (Node child; visible_) {
+        foreach (Node child; visuals_) {
             child.draw(delta, drawList);
         }
         drawList.endComposite();
@@ -319,7 +319,7 @@ public:
         Scans for parts to render
     */
     void scanParts() {
-        this.findVisuals(visible_);
+        this.findVisuals(visuals_);
     }
 }
 
