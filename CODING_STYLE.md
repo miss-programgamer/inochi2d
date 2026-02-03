@@ -58,3 +58,7 @@ void exampleFunction(int* myValue) @nogc nothrow {
 ## Attributes
 Attributes such as `@nogc` and `nothrow` should be at the end of a function's definition,
 other attributes should be at the start, such as `@property`.
+
+# On auto-formatting
+When making a pull-request your code may be automatically formatted by dfmt, in cases where this formatting makes your code hard to read,
+surround the code in question with `// dfmt off` and `// dfmt on` comments.
