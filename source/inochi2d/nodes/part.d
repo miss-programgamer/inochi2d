@@ -41,6 +41,7 @@ align(vec4.sizeof):
 @TypeId("Part", 0x0101)
 class Part : Visual, IDeformable {
 private:
+@nogc:
     Mesh mesh_;
     DeformedMesh deformed_;
     DeformedMesh base_;
@@ -55,6 +56,11 @@ private:
     vec3 offsetScreenTint = vec3(0);
 
 protected:
+
+    /**
+        The deformed mesh state of the part.
+    */
+    @property ref DeformedMesh deformedMesh() => deformed_;
 
     /**
         The current active draw list slot for this
@@ -123,7 +129,6 @@ protected:
         object.tryGetRef(opacity, "opacity");
         object.tryGetRef(tint, "tint");
         object.tryGetRef(screenTint, "screenTint");
-        object.tryGetRef(tint, "tint");
         object.tryGetRef(emissionStrength, "emissionStrength");
 
         if ("blend_mode" in object && object["blend_mode"].isNumber)
@@ -418,9 +423,6 @@ public:
     */
     override
     bool hasProperty(string key) {
-        if (super.hasProperty(key))
-            return true;
-
         switch (key) {
         case "opacity":
         case "tint.r":
@@ -431,8 +433,9 @@ public:
         case "screenTint.b":
         case "emissionStrength":
             return true;
+
         default:
-            return false;
+            return super.hasProperty(key);
         }
     }
 

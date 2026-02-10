@@ -349,7 +349,11 @@ alias vec4us = Vector!(ushort, 4); /// ditto
 void onSerialize(T)(ref T value, ref DataNode dst) @nogc if (isVector!T) {
     dst = DataNode.createArray();
     static foreach (i; 0 .. T.dimension) {
-        dst.array ~= DataNode(isFinite(value.vector[i]) ? value.vector[i] : 0);
+        static if (__traits(isFloating, T)) {
+            dst.array ~= DataNode(isFinite(value.vector[i]) ? value.vector[i] : 0);
+        } else {
+            dst.array ~= DataNode(value.vector[i]);
+        }
     }
 }
 

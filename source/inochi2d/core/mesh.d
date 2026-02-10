@@ -325,6 +325,18 @@ public:
     }
 
     /**
+        Applies an offset to the deformed mesh' UV coordinates.
+
+        Params:
+            offset =    The offset to apply to the texel coordinates.
+    */
+    void applyUVOffset(vec2 offset) {
+        foreach(ref vtx; deformed_) {
+            vtx.uv += offset;
+        }
+    }
+
+    /**
         Resets the deformation.
     */
     void reset() {
