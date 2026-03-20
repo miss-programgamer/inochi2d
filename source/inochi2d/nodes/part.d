@@ -11,6 +11,7 @@ import inochi2d.nodes.visual;
 import inochi2d.effect;
 import inochi2d.nodes;
 import inochi2d.core;
+import nulib;
 import numem;
 
 import std.exception;
@@ -46,7 +47,7 @@ private:
     Mesh mesh_;
     DeformedMesh deformed_;
     DeformedMesh base_;
-    MeshEffect[] effects_;
+    weak_vector!MeshEffect effects_;
 
     //
     //      PARAMETER OFFSETS
@@ -214,6 +215,10 @@ protected:
     void onPostUpdate(DrawList drawList) {
         super.onPostUpdate(drawList);
         this.drawListSlot = drawList.allocate(deformed_.vertices, deformed_.indices);
+
+        // Apply mesh effects.
+        foreach(effect; effects_)
+            effect.apply(drawList);
     }
 
     /**
@@ -284,6 +289,11 @@ public:
         this.deformed_.parent = value;
         this.base_.parent = value;
     }
+
+    /**
+        Mesh effects applied to the part.
+    */
+    final @property MeshEffect[] effects() => effects_;
 
     /**
         Local matrix of the deformable object.
@@ -444,6 +454,34 @@ public:
     override
     void offsetTransform(Transform other) @nogc {
         super.offsetTransform(other);
+    }
+
+    /**
+        Adds a mesh effect to the part.
+
+        Param:
+            T =     The type of the mesh effect to add.
+            args =  The arguments to pass to the effect's constructor.
+    */
+    void addEffect(T, Args...)(Args args)
+    if (is(T : MeshEffect)) {
+        this.effects_ ~= nogc_new!T(this, args);
+    }
+
+    /**
+        Removes a given mesh effect from this part.
+
+        Params:
+            effect = The effect to remove.
+    */
+    void removeEffect(MeshEffect effect) {
+        foreach(i, applied; effects_) {
+            if (applied is effect) {
+                this.effects_.removeAt(i);
+                effect.release();
+                return;
+            }
+        }
     }
 
     /**

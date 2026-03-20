@@ -88,11 +88,10 @@ protected:
         Called after the full node update cycle.
         
         Params:
-            delta =     Time since the last frame.
             drawList =  The drawlist for the active scene.
     */
     override
-    void onApply(float delta, DrawList drawList) {
+    void onApply(DrawList drawList) {
         vec2[] targetMesh = target_.deformPoints;
         vec2[] sourceMesh = parent.deformPoints;
         foreach(i, ref WeldVertex weld; vertices_) {

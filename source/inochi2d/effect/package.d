@@ -56,10 +56,9 @@ protected:
         Called after the full node update cycle.
         
         Params:
-            delta =     Time since the last frame.
             drawList =  The drawlist for the active scene.
     */
-    void onApply(float delta, DrawList drawList) { }
+    void onApply(DrawList drawList) { }
 
 public:
 
@@ -111,11 +110,10 @@ public:
         normal node updates have completed.
         
         Params:
-            delta =     Time since the last frame.
             drawList =  The drawlist for the active scene.
     */
-    final void apply(float delta, DrawList drawList) {
-        this.onApply(delta, drawList);
+    final void apply(DrawList drawList) {
+        this.onApply(drawList);
     }
 }
 mixin Register!(MeshEffect, in_effect_registry);
