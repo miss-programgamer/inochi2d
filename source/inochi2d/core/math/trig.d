@@ -80,3 +80,50 @@ pragma(inline, true)
 float sign(ref vec2 p1, ref vec2 p2, ref vec2 p3) @nogc nothrow pure {
     return (p1.x - p3.x) * (p2.y - p3.y) - (p2.x - p3.x) * (p1.y - p3.y);
 }
+
+/**
+    Finds the closest 2 points to the given point.
+
+    Param:
+        point = The point to find the closest 2 points to
+        mesh =  The mesh to index.
+
+    Returns:
+        The vertex indices of the mesh of the 2 closest points
+        to the given point, or $(D -1) if there's fewer than 2
+        points in the mesh.
+*/
+ptrdiff_t[2] findClosest2(inout(vec2) point, inout(vec2)[] mesh) @nogc nothrow pure {
+    ptrdiff_t p1 = -1;
+    ptrdiff_t p2 = -1;
+    float closestDist = float.max;
+    foreach(i, p; mesh) {
+        if (p.distance(point) < closestDist) {
+            p2 = p1;
+            p1 = i;
+        }
+    }
+    return [p1, p2];
+}
+
+/**
+    Finds the closest point to the given point.
+
+    Param:
+        point = The point to find the closest point to
+        mesh =  The mesh to index.
+
+    Returns:
+        The vertex index of the closest point,
+        or $(D -1) if there is no points in the mesh.
+*/
+ptrdiff_t findClosest(inout(vec2) point, inout(vec2)[] mesh) @nogc nothrow pure {
+    ptrdiff_t p1 = -1;
+    float closestDist = float.max;
+    foreach(i, p; mesh) {
+        if (p.distance(point) < closestDist) {
+            p1 = i;
+        }
+    }
+    return p1;
+}

@@ -135,19 +135,11 @@ protected:
         if ("children" in object && object["children"].isArray) {
             foreach (ref child; object["children"].array) {
 
-                // Fetch type from json
-                if (string type = child.tryGet!string("type", null)) {
-
-                    // Skips unknown node types
-                    // TODO: A logging system that shows a warning for this?
-                    if (!in_node_registry.has(type))
-                        continue;
-
-                    // NOTE:    inInstantiateNode implicitly handles setting the
-                    //          Parent-child relationship, so we don't need to do
-                    //          anything else besides pass it onto the child's
-                    //          deserializer.
-                    Node n = in_node_registry.create(type);
+                // NOTE:    inInstantiateNode implicitly handles setting the
+                //          Parent-child relationship, so we don't need to do
+                //          anything else besides pass it onto the child's
+                //          deserializer.
+                if (Node n = in_node_registry.tryCreateFrom(child)) {
                     n.parent = this;
                     child.deserialize(n);
                 }

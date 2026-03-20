@@ -10,6 +10,7 @@ module inochi2d.core.registry;
 import numem.core.lifetime;
 import numem.core.memory;
 import numem.core.traits;
+import inp.format;
 import numem;
 import nulib;
 
@@ -40,7 +41,8 @@ mixin template Register(T, alias registry) {
         pragma(msg, "Registering ", T.stringof, " in ", registry.stringof, "...");
 
         pragma(crt_constructor)
-        mixin("export extern(C) void __in_register_", T.stringof, "() { registry.register!T(); }");
+        pragma(mangle, "__in_register_"~T.stringof)
+        export extern(C) void __register_type() { registry.register!T(); }
     }
 }
 
@@ -48,20 +50,31 @@ mixin template Register(T, alias registry) {
     A type registry that stores mappings between name and numeric IDs
     and their classes.
 */
-struct TypeRegistry(T) {
+struct TypeRegistry(T, Args...) {
 private:
     // dfmt off
     alias __TypeMap(Key, Value) = MapImpl!(Key, Value, (a, b) => a < b, false, false);
-    static X __construct(X)() @nogc { return assumeNoGC(() { return new(nu_mallocT!X()) X(); }); }
+    static X __construct(X)(Args args) @nogc {
+            return assumeNoGC((Args args) {
+                return new(nu_mallocT!X()) X(args);
+            }, 
+            args
+        );
+    }
     // dfmt on
 
 @nogc:
-    alias factory_t = T function();
+    alias factory_t = T function(Args);
     __TypeMap!(void*, TypeId) typeIdStore;
     __TypeMap!(string, factory_t) factoryStoreS;
     __TypeMap!(uint, factory_t) factoryStoreN;
 
 public:
+
+    /**
+        Arguments
+    */
+    alias ArgsT = Args;
 
     /**
         Registers the given type in the type registry.
@@ -148,15 +161,16 @@ public:
         the registry.
 
         Params:
-            sid = The string id to look up.
+            sid =   The string id to look up.
+            args =  Arguments to pass to the constructor
         
         Returns:
             A new instance of the given type,
             $(D null) if not found.
     */
-    T create(string sid) {
+    T create(string sid, Args args) {
         if (sid in factoryStoreS)
-            return factoryStoreS[sid]();
+            return factoryStoreS[sid](args);
         return null;
     }
 
@@ -165,15 +179,16 @@ public:
         the registry.
 
         Params:
-            nid = The numeric id to look up.
+            nid =   The numeric id to look up.
+            args =  Arguments to pass to the constructor
         
         Returns:
             A new instance of the given type,
             $(D null) if not found.
     */
-    T create(uint nid) {
+    T create(uint nid, Args args) {
         if (nid in factoryStoreN)
-            return factoryStoreN[nid]();
+            return factoryStoreN[nid](args);
         return null;
     }
 
@@ -187,5 +202,29 @@ public:
     */
     auto iterAll() {
         return typeIdStore.byValue();
+    }
+
+    /**
+        Tries to create a type from the registry based on a DataNode.
+        The DataNode must have a field called $(D type).
+
+        Params:
+            object =    The Object DataNode to deserialize from.
+            args =      Arguments to pass to the type's constructor
+        
+        Returns:
+            A newly allocated type based on the $(D type) tag,
+            or $(D null) if this failed.
+    */
+    T tryCreateFrom(ref DataNode object, Args args) {
+        if (object.isObject && "type" in object) {
+            if (string type = object["type"].tryCoerce!string(null)) {
+                if (!this.has(type))
+                    return null;
+                
+                return this.create(type, args);
+            }
+        }
+        return null;
     }
 }

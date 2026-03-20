@@ -8,6 +8,7 @@
 */
 module inochi2d.nodes.part;
 import inochi2d.nodes.visual;
+import inochi2d.effect;
 import inochi2d.nodes;
 import inochi2d.core;
 import numem;
@@ -45,6 +46,7 @@ private:
     Mesh mesh_;
     DeformedMesh deformed_;
     DeformedMesh base_;
+    MeshEffect[] effects_;
 
     //
     //      PARAMETER OFFSETS
@@ -90,7 +92,19 @@ protected:
                 object["textures"].array ~= DataNode(NO_TEXTURE);
             }
         }
+        
+        // Serialize attached effects.
+        if (effects_.length > 0) {
+            object["effects"] = DataNode.createArray();
+            foreach(effect; effects_) {
 
+                DataNode effectObj;
+                effect.serialize(effectObj);
+                object["effects"].array ~= effectObj;
+            }
+        }
+
+        // Serialize basic data.
         object["blend_mode"] = cast(uint)blendingMode;
         object["tint"] = tint.serialize();
         object["screenTint"] = screenTint.serialize();
@@ -112,7 +126,9 @@ protected:
         this.deformed_ = nogc_new!DeformedMesh();
         this.base_ = nogc_new!DeformedMesh();
         this.mesh = Mesh.fromMeshData(object.tryGet!MeshData("mesh"));
-        if ("textures" in object && object["textures"].isArray()) {
+
+        // Textures
+        if ("textures" in object && object["textures"].isArray) {
             foreach (i, ref DataNode element; object["textures"].array) {
 
                 uint textureId = element.tryGet!uint(NO_TEXTURE);
@@ -126,6 +142,15 @@ protected:
             }
         }
 
+        // Effects
+        if ("effects" in object && object["effects"].isArray) {
+            foreach(i, ref DataNode element; object["effects"].array) {
+                if (MeshEffect effect = in_effect_registry.tryCreateFrom(element, this)) {
+                    effect.deserialize(element);
+                }
+            }
+        }
+
         object.tryGetRef(opacity, "opacity");
         object.tryGetRef(tint, "tint");
         object.tryGetRef(screenTint, "screenTint");
@@ -135,6 +160,17 @@ protected:
             blendingMode = cast(BlendMode)object.tryGet!uint("blend_mode", blendingMode.normal);
         else
             blendingMode = object.tryGet!string("blend_mode", "Normal").toBlendMode();
+    }
+
+    /**
+        Called when the node is to finalize its deserialization from disk.
+    */
+    override
+    void onFinalize() {
+        super.onFinalize();
+        foreach(effect; effects_) {
+            effect.finalize();
+        }
     }
 
     /**
