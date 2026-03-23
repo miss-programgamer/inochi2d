@@ -92,7 +92,7 @@ Result!DataNode readINP(Stream stream) @nogc {
             return error!DataNode("Unknown file format!");
         
         case INPFileFormat.inp1:
-            return error!DataNode("TODO");
+            return readINP1(stream);
 
         case INPFileFormat.inp2:
             return readINP2(stream);

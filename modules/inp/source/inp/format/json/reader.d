@@ -78,6 +78,9 @@ string readJsonString(StreamReader reader) {
     char c;
     do {
         c = cast(char)reader.readU8();
+        if (c == '"')
+            break;
+        
         result ~= c;
 
         // Read escape codes.
@@ -166,6 +169,9 @@ string readJsonImpl()(StreamReader reader, ref DataNode node, size_t start, size
                 string key = reader.readJsonString();
                 reader.skipWhitespace();
 
+                import core.stdc.stdio : printf;
+                printf("%s\n", key.ptr);
+
                 c = cast(char)reader.readU8();
                 if (c != ':')
                     return "Invalid key-value pair!";
@@ -188,9 +194,7 @@ string readJsonImpl()(StreamReader reader, ref DataNode node, size_t start, size
             return null;
 
         case '"':
-            reader.skipWhitespace();
             string value = reader.readJsonString();
-            reader.skipWhitespace();
             node = DataNode(value);
             nu_freea(value);
             return null;

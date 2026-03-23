@@ -95,6 +95,17 @@ Add with `--d-version=`
 | `IN_VEC3_POSITION` | Use 3D vectors to store the `POSITION` portion of the vertex data. |
 |     `IN_NO_LEGACY` | Disables legacy features.                                          |
 
+## Inochi2D Godot
+We provide an official binding for Godot, using GDExtension and the `nugodot` bindings.
+To build it you **must** either have your target version of Godot in your `PATH` environment variable,
+or specify the full path to godot with the `GODOT_PATH` environment variable.
+
+The GDExtension may then be built by running `dub build :godot` in the root of this repository,
+the GDExtension will be written to `modules/godot/out/`. Move the contents of this folder into your
+Godot project under a subfolder called `inochi2d`, then reload your Project.
+
+You should then be able to load in `inx` and `inp` model files.
+
 # Inochi2D Technical Documentation
 Technical documentation for Inochi2D is provided in the `tech-docs/` directory, 
 these are shipped with the SDK.

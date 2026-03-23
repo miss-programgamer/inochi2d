@@ -83,9 +83,8 @@ GUID tryGetGUID(ref DataNode obj) @nogc {
 private:
 
 __gshared Random __i2d_uuid_random;
-shared static this() {
-    import core.time : MonoTime;
+pragma(crt_constructor)
+export extern(C) void __i2d_init_random() {
     import numem : nogc_new;
-
-    __i2d_uuid_random = nogc_new!Random(cast(size_t)MonoTime.currTime.ticks);
+    __i2d_uuid_random = nogc_new!Random(0);
 }

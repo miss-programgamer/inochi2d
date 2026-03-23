@@ -10,6 +10,7 @@ targetPath "out/"
 
 // Submodules
 subPackage "modules/inp"
+subPackage "modules/godot"
 
 // Internally needed libraries.
 dependency ":inp" version="*"
@@ -23,7 +24,7 @@ dependency "numem" version=">=1.6.4"
 
 stringImportPaths "shaders/"
     
-copyFiles "LICENSE" "tech-docs"
+copyFiles "LICENSE"
 
 // Engine Support Modules
 // subPackage "modules/gdextension"
@@ -37,7 +38,7 @@ configuration "static" {
 configuration "dynamic" {
     targetType "dynamicLibrary"
 
-    copyFiles "include/"
+    copyFiles "include/" "tech-docs"
 
     versions "IN_DYNLIB"
 }
