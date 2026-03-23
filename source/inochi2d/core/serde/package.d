@@ -34,18 +34,6 @@ T deserialize(T)(ref DataNode data) {
 }
 
 pragma(inline, true)
-void deserialize(T)(ref DataNode data, T[] destination) @nogc {
-    if (!data.isArray)
-        return;
-
-    foreach (ref ae; data.array) {
-        foreach (i; 0 .. destination.length) {
-            ae.deserialize(destination[i]);
-        }
-    }
-}
-
-pragma(inline, true)
 void deserialize(T)(ref DataNode data, ref T destination) @nogc {
     import inochi2d.core.serde.deserializers;
     import inochi2d.core.math;
@@ -81,8 +69,16 @@ void deserialize(T)(ref DataNode data, ref T destination) @nogc {
             return;
 
         destination.resize(data.length);
-        foreach (ref value; data.array) {
-            destination ~= value.deserialize!VT();
+        foreach (i, ref value; data.array) {
+            destination[i] = value.deserialize!VT();
+        }
+    } else static if (is(T == U[], U)) {
+        if (!data.isArray)
+            return;
+
+        destination = destination.nu_resize(data.length);
+        foreach (i, ref value; data.array) {
+            destination[i] = value.deserialize!U();
         }
     } else static if (is(T == MapImpl!(string, VT, Args), VT, Args...)) {
         if (!data.isObject)

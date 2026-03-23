@@ -242,7 +242,7 @@ protected:
         Deserializes a puppet
     */
     void onDeserialize(ref DataNode object) @nogc {
-
+        
         // Invalid type.
         if (!object.isObject)
             return;

@@ -86,7 +86,11 @@ public:
 
         // Load puppet into stream
         auto mstream = nogc_new!MemoryStream(data_[]);
-        scope(exit) nogc_delete(mstream);
+        scope(exit) {
+            // Yoink the ownership so we don't free the array.
+            mstream.take();
+            nogc_delete(mstream);
+        }
 
         // Parse puppet
         auto puppet = Puppet.fromStream(mstream);

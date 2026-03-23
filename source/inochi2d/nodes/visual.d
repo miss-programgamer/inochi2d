@@ -294,9 +294,12 @@ void findVisuals(Node root, ref Visual[] visuals, bool recurseDelegates = false,
     }
 
     if (!append)
-        nu_freea(visuals);
-    
-    findVisualsImpl(root, visuals, recurseDelegates);
+        in_clear_slice(visuals);
+
+    // Find all visuals in children.
+    foreach(child; root.children) {
+        findVisualsImpl(child, visuals, recurseDelegates);
+    }
     if (sort)
         sortNodes(visuals);
 }

@@ -78,8 +78,8 @@ public:
 struct Deformation {
     vec2[] vertexOffsets;
 
-    ~this() @trusted @nogc nothrow {
-        nu_freea(vertexOffsets);
+    this(ref return scope Deformation other) @trusted @nogc nothrow {
+        this.vertexOffsets = vertexOffsets.nu_dup();
     }
 
     this(vec2[] data) @trusted @nogc nothrow {
@@ -246,9 +246,14 @@ struct Deformation {
     }
 
     void onDeserialize(ref DataNode data) @nogc {
-        this.vertexOffsets = nu_malloca!vec2(data.length / 2);
+        this.vertexOffsets = nu_malloca!vec2(data.length);
         foreach (i, ref element; data.array) {
             this.vertexOffsets[i / 2] = element.deserialize!vec2();
         }
+    }
+
+    void free() @nogc {
+        if (vertexOffsets)
+            nu_freea(vertexOffsets);
     }
 }

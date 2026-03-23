@@ -209,7 +209,9 @@ struct KV(TKey, TValue) {
 
     pragma(inline, true)
     static void kvassign(T)(ref T dst, ref T src) {
-        static if (is(T == U[], U)) {
+        static if (is(T == string)) {
+            dst = src.nu_dup();
+        } else static if (is(T == U[], U)) {
             dst = src.nu_dup();
         } else static if (hasElaborateMove!T) {
             dst = src.move();

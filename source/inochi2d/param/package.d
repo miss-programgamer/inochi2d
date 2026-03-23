@@ -254,7 +254,7 @@ public:
                     break;
 
                 this.axisPoints[i].resize(axis.length);
-                axis.deserialize(axisPoints[i][0 .. axis.length]);
+                axis.deserialize(axisPoints[i]);
             }
         }
 

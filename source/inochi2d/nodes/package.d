@@ -789,8 +789,8 @@ void findNodes(T)(Node root, ref T[] list) @nogc if (is(T : Node)) {
             findNodesImpl(child, list);
         }
     }
-    
-    nu_freea(list);
+
+    in_clear_slice(list);
     findNodesImpl(root, list);
 }
 

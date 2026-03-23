@@ -14,6 +14,7 @@ import nulib.io.stream;
 import nulib.math;
 import numem;
 import inp.format.json.reader;
+import core.stdc.stdio : printf;
 
 import inp.format : 
     INP_TAG_PAYLOAD, 
@@ -67,7 +68,7 @@ void readINP1Impl()(StreamReader reader, ref DataNode node) {
 
             case INP1_MAGIC:
                 uint payloadLength = reader.readU32BE();
-                reader.readJson(node[INP_TAG_PAYLOAD], payloadLength);
+                auto result = reader.readJson(node[INP_TAG_PAYLOAD], payloadLength);
                 break;
 
             case INP_TAG_TEXTURES:
@@ -77,9 +78,11 @@ void readINP1Impl()(StreamReader reader, ref DataNode node) {
                     // Main data
                     uint dataLength = reader.readU32BE();
                     ubyte encoding = reader.readU8();
+
                     if (dataLength > 0) {
                         DataNode result = DataNode.createObject();
                         ubyte[] data = nu_malloca!ubyte(dataLength);
+                        reader.stream.read(data);
 
                         result["encoding"] = encoding;
                         result["data"] = data;
@@ -93,11 +96,16 @@ void readINP1Impl()(StreamReader reader, ref DataNode node) {
             case INP_TAG_VENDOR:
                 uint count = reader.readU32BE();
                 foreach(i; 0..count) {
-                    auto dataKey = reader.readUTF8(reader.readU32BE());
-                    auto dataValue = nu_malloca!ubyte(reader.readU32BE());
+                    auto keyLength = reader.readU32BE();
+                    auto dataKey = reader.readUTF8(keyLength).take();
+                    auto dataLength = reader.readU32BE();
+                    auto dataValue = nu_malloca!ubyte(dataLength);
+
                     reader.stream.read(dataValue);
                     node[INP_TAG_VENDOR][dataKey] = dataValue;
+                    
                     nu_freea(dataValue);
+                    nu_freea(dataKey);
                 }
                 break;
         }

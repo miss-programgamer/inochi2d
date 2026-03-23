@@ -14,6 +14,8 @@ import nulib.string;
 import nulib.math;
 import numem;
 
+import core.stdc.stdio : printf;
+
 @nogc:
 
 /**
@@ -32,6 +34,7 @@ Result!DataNode readJson(Stream stream) @nogc {
 
     if (auto err = reader.readJsonImpl(result, reader.stream.tell, reader.stream.length))
         return error!DataNode(err);
+    printf("Read complete\n");
 
     return ok(result.move());
 }
@@ -50,7 +53,7 @@ Result!DataNode readJson(Stream stream) @nogc {
 
 */
 string readJson(StreamReader reader, ref DataNode node, uint length = uint.max) @nogc {
-    return reader.readJsonImpl(node, reader.stream.tell, min(reader.stream.length-reader.stream.tell, length));
+    return reader.readJsonImpl(node, reader.stream.tell, min(length, reader.stream.length-reader.stream.tell));
 }
 
 
@@ -65,6 +68,35 @@ char peekChar(StreamReader reader) {
     char c = cast(char)reader.readU8();
     reader.stream.seek(-1, SeekOrigin.relative);
     return c;
+}
+
+string peek(StreamReader reader, uint length) {
+    auto s = reader.read(length);
+    if (s.length > 0) {
+        reader.stream.seek(-cast(ptrdiff_t)s.length, SeekOrigin.relative);
+    }
+    return s;
+}
+
+bool peek(StreamReader reader, string key) {
+    string read = reader.peek(cast(uint)key.length);
+    bool same = key == read;
+    nu_freea(read);
+    return same;
+}
+
+string read(StreamReader reader, uint length) {
+    return reader.readUTF8(length).take();
+}
+
+string popString(StreamReader reader, string key) {
+    auto read = reader.readUTF8(cast(uint)key.length);
+    if (read == key) {
+        return key;
+    }
+
+    reader.stream.seek(-cast(ptrdiff_t)read.length, SeekOrigin.relative);
+    return null;
 }
 
 string readJsonString(StreamReader reader) {
@@ -89,7 +121,7 @@ string readJsonString(StreamReader reader) {
             result ~= c;
         }
     } while(c != '"');
-    return result.take()[0..$-1];
+    return result.take();
 }
 
 string readJsonNumber(StreamReader reader) {
@@ -100,6 +132,8 @@ string readJsonNumber(StreamReader reader) {
         c = cast(char)reader.readU8();
         result ~= c;
     } while (isNumberChar(c));
+
+    reader.stream.seek(-1, SeekOrigin.relative);
     return result.take();
 }
 
@@ -108,48 +142,75 @@ bool isJsonSymbol(char c) {
     return isAlphaNumeric(c) || 
         c == '"' || c == ':' || c == ',' || 
         c == '{' || c == '}' ||
-        c == '[' || c == ']';
+        c == '[' || c == ']' || c == '.';
 }
 
 void skipWhitespace(StreamReader reader) {
-    do {} while(!isJsonSymbol(cast(char)reader.readU8()));
+    do { } while(!isJsonSymbol(cast(char)reader.readU8()));
     reader.stream.seek(-1, SeekOrigin.relative);
 }
 
 bool isNumberChar(char c) {
-    return (c >= '0' && c <= '9') || c == '.';
+    return (c >= '0' && c <= '9') || c == '.' || c == '-' || c == '+';
 }
 
 string readJsonImpl()(StreamReader reader, ref DataNode node, size_t start, size_t length) {
     import nulib.conv : to_floating;
-    reader.skipWhitespace();
 
-    if (reader.stream.tell() > start+length)
+    reader.skipWhitespace();
+    if (reader.stream.tell() >= start+length)
         return "Reached EOF";
+
 
     char c = cast(char)reader.readU8();
     switch(c) {
         default:
+            reader.stream.seek(-1, SeekOrigin.relative);
             if (isNumberChar(c)) {
-                reader.stream.seek(-1, SeekOrigin.relative);
                 
                 auto valueStr = reader.readJsonNumber();
                 node = DataNode(to_floating!double(valueStr));
                 nu_freea(valueStr);
+                return null;
             }
-            return null;
+
+            if (reader.peek("true")) {
+                reader.stream.seek(4, SeekOrigin.relative);
+                node = DataNode(true);
+                return null;
+            }
+
+            if (reader.peek("false")) {
+                reader.stream.seek(5, SeekOrigin.relative);
+                node = DataNode(false);
+                return null;
+            }
+
+            // Skip 'null'
+            if (reader.peek("null")) {
+                reader.stream.seek(4, SeekOrigin.relative);
+                return null;
+            }
+
+            // Okay, no idea what this character is.
+            return "Unexpected token";
 
         case '[':
             node = DataNode.createArray();
+            
+            // Empty array.
+            if (reader.peekChar() == ']') {
+                reader.stream.seek(1, SeekOrigin.relative);
+                return null;
+            }
+
             do {
                 DataNode value;
 
                 reader.skipWhitespace();
-                
                 if (auto error = reader.readJsonImpl(value, start, length))
                     return error;
                 node ~= value.move();
-
                 reader.skipWhitespace();
 
                 c = cast(char)reader.readU8();
@@ -161,6 +222,13 @@ string readJsonImpl()(StreamReader reader, ref DataNode node, size_t start, size
 
         case '{':
             node = DataNode.createObject();
+            
+            // Empty object.
+            if (reader.peekChar() == '}') {
+                reader.stream.seek(1, SeekOrigin.relative);
+                return null;
+            }
+
             do {
                 DataNode value;
 
@@ -168,9 +236,6 @@ string readJsonImpl()(StreamReader reader, ref DataNode node, size_t start, size
                 reader.skipWhitespace();
                 string key = reader.readJsonString();
                 reader.skipWhitespace();
-
-                import core.stdc.stdio : printf;
-                printf("%s\n", key.ptr);
 
                 c = cast(char)reader.readU8();
                 if (c != ':')
