@@ -42,21 +42,10 @@ struct in_puppet_t;
         $(D in_get_last_error)
 */
 in_puppet_t* in_puppet_load(const(char)* file) {
-    import core.memory : GC;
+    import nulib.string : fromStringz;
 
     __in_clear_error();
-
-    string path = cast(string)file[0 .. nu_strlen(file)];
-    return cast(in_puppet_t*)assumeNoGC((string file) {
-        try {
-            Puppet p = assumeNoGC(&inLoadPuppet!Puppet, file);
-            GC.addRoot(cast(void*)p);
-            return p;
-        } catch (Exception ex) {
-            __in_set_error(ex);
-            return null;
-        }
-    }, path);
+    return cast(in_puppet_t*)Puppet.fromFile(cast(string)file.fromStringz);
 }
 
 /**
@@ -73,20 +62,15 @@ in_puppet_t* in_puppet_load(const(char)* file) {
         $(D in_get_last_error)
 */
 in_puppet_t* in_puppet_load_from_memory(const(ubyte)* data, uint length) {
-    import core.memory : GC;
+    import nulib.io.stream : MemoryStream;
 
     __in_clear_error();
-
-    return cast(in_puppet_t*)assumeNoGC((ubyte[] buffer) {
-        try {
-            Puppet p = assumeNoGC(&inLoadINPPuppet!Puppet, buffer);
-            GC.addRoot(cast(void*)p);
-            return p;
-        } catch (Exception ex) {
-            __in_set_error(ex);
-            return null;
-        }
-    }, cast(ubyte[])data[0 .. length]);
+    auto stream = nogc_new!MemoryStream(cast(ubyte[])data[0..length]);
+    scope(exit) {
+        stream.take();
+        nogc_delete(stream);
+    }
+    return cast(in_puppet_t*)Puppet.fromStream(stream);
 }
 
 /**
@@ -101,13 +85,8 @@ in_puppet_t* in_puppet_load_from_memory(const(ubyte)* data, uint length) {
         obj = The puppet object.
 */
 void in_puppet_free(in_puppet_t* obj) {
-    import core.memory : GC;
-
-    if (obj) {
-        GC.removeRoot(cast(void*)obj);
-        assumeNoGC(&destroy!(false, Puppet), cast(Puppet)obj);
-        GC.free(obj);
-    }
+    Puppet puppet = cast(Puppet)obj;
+    nogc_delete(puppet);
 }
 
 /**
