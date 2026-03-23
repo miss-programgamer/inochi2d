@@ -60,7 +60,7 @@ public:
     this(T[] values) {
         this.values = Rc!(VStoreT)(VStoreT());
         this.values.resize(values.length);
-        this.values[0..$] = values[0..$];
+        nu_memcpy(&this.values, &values, values.length*T.sizeof);
     }
 
     /**
