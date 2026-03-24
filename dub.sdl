@@ -28,7 +28,7 @@ copyFiles "LICENSE"
 
 // SIMD optimization flags.
 dflags "-mattr=+sse3,+avx,+sse4.1" platform="x86_64-ldc"
-dflags "-mattr=+crc" platform="aarch64-ldc"
+dflags "-mattr=+neon,+crc" platform="aarch64-ldc"
 
 // Base configuration.
 configuration "static" {
