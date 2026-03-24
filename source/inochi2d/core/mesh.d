@@ -295,14 +295,9 @@ public:
     */
     void pushMatrix(mat4 matrix) {
 
-        // NOTE: SIMD is slower in this instance due to how multiple arrays
-        // are involved.
-        foreach (i; 0 .. delta_.length) {
-            delta_[i] += (matrix * vec4(delta_[i].xy, 0, 1)).xy;
-
-            deformed_[i].vtx.x = delta_[i].x;
-            deformed_[i].vtx.y = delta_[i].y;
-        }
+        // First do optimized multiplication.
+        simd_mul(delta_, matrix);
+        simd_broadcast_mesh(deformed_, delta_);
     }
 
     /**

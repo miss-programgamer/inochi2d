@@ -1,12 +1,12 @@
 /**
-    Inochi2D SIMD Helpers
+    Inochi2D Matrix SIMD Helpers
 
-    Copyright © 2020-2025, Inochi2D Project
+    Copyright © 2025, Inochi2D Project
     Distributed under the 2-Clause BSD License, see LICENSE file.
     
     Authors: Luna Nielsen
 */
-module inochi2d.core.math.simd;
+module inochi2d.core.math.simd.matrix;
 import inmath.linalg;
 import inmath.util;
 import inteli;

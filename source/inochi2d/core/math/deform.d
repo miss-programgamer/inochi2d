@@ -142,7 +142,15 @@ struct Deformation {
 
     Deformation opBinaryRight(string op : "*", T)(T other) @trusted nothrow {
         return assumeNoThrowNoGC((Deformation self, T other) {
-            static if (is(T == Deformation)) {
+            static if (is(T == mat4)) {
+                
+                // Optimized matrix multiplication
+                Deformation new_;
+                new_.vertexOffsets = self.vertexOffsets.nu_dup();
+                simd_mul(new_.vertexOffsets, other);
+                
+                return new_;  
+            } static if (is(T == Deformation)) {
                 Deformation new_;
 
                 new_.vertexOffsets.length = self.vertexOffsets.length;
