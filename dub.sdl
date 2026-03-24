@@ -26,8 +26,9 @@ stringImportPaths "shaders/"
     
 copyFiles "LICENSE"
 
-// Engine Support Modules
-// subPackage "modules/gdextension"
+// SIMD optimization flags.
+dflags "-mattr=+sse3,+avx,+sse4.1" platform="x86_64-ldc"
+dflags "-mattr=+crc" platform="aarch64-ldc"
 
 // Base configuration.
 configuration "static" {
@@ -46,15 +47,4 @@ configuration "dynamic" {
 // Unit tests
 configuration "unittest" {
     dependency "silly" version=">=1.1.1"
-}
-
-// SIMD Optimisation Modes
-buildType "release" {
-    dflags "-mattr=+sse3" "-mattr=+sse4.1" platform="x86_64-ldc"
-    dflags "-mattr=+crc" platform="aarch64-ldc"
-}
-
-buildType "release-debug" {
-    dflags "-mattr=+sse3" "-mattr=+sse4.1" platform="x86_64-ldc"
-    dflags "-mattr=+crc" platform="aarch64-ldc"
 }
