@@ -123,11 +123,60 @@ void simd_mul(ref vec2[] mesh, mat4 matrix) @nogc nothrow {
 @("vec2 * mat4")
 unittest {
     mat4 testMatrix = mat4.translation(1.0, 0.0, 0.0);
-    vec2[] testArray = new vec2[1000];
+    vec2[] testArray = new vec2[10_000];
     testArray[] = vec2(1.0, 1.0);
 
     simd_mul(testArray, testMatrix);
     foreach(i, value; testArray) {
         assert(value == vec2(2.0, 1.0));
     }
+}
+
+/**
+    Offsets all of the coordinates in the given mesh with the given offset.
+    For larger meshes, the offset is done with SIMD.
+
+    Params:
+        mesh =      The mesh to offset.
+        offset =    The offset to perform
+*/
+void simd_offset(ref vec2[] mesh, vec2 offset) @nogc nothrow {
+
+    // Non-SIMD version
+    if (mesh.length < IN_SIMD_THRESHOLD) {
+        foreach(i; 0..mesh.length) {
+            mesh[i] += offset;
+        }
+        return;
+    }
+
+    // Offset loaded from variable.
+    __m128 m_offset = _mm_set_ps(offset.y, offset.x, offset.y, offset.x);
+
+    // SIMD version
+    size_t i = 0;
+    for(; i < nu_aligndown(mesh.length, 2); i += 2) {
+        _mm_storeu_ps(
+            cast(float*)mesh[i].ptr, 
+            _mm_add_ps(
+                _mm_loadu_ps(cast(float*)mesh[i].ptr), 
+                m_offset
+            )
+        );
+    }
+
+    // Tail iteration to finalize the offset
+    if (i < mesh.length) {
+        _mm_storel_pi(
+            cast(__m64*)mesh[i].ptr, 
+            _mm_add_ps(
+                _mm_loadl_pi(
+                    IN_SIMD_IDENTITY, 
+                    cast(const(__m64)*)mesh[i].ptr
+                ),
+                m_offset
+            )
+        );
+    }
+
 }

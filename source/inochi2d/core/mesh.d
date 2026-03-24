@@ -265,12 +265,19 @@ public:
             by =        The deltas to deform the mesh by
     */
     void deform(vec2[] by) {
-        foreach (i; 0 .. delta_.length) {
-            delta_[i] += by[i];
+        simd_deform(delta_, by);
+        simd_broadcast_mesh(deformed_, delta_);
+    }
 
-            deformed_[i].vtx.x = delta_[i].x;
-            deformed_[i].vtx.y = delta_[i].y;
-        }
+    /**
+        Deforms the mesh uniformly by the given value.
+
+        Params:
+            by =        The deltas to deform the mesh by
+    */
+    void deform(vec2 by) {
+        simd_offset(delta_, by);
+        simd_broadcast_mesh(deformed_, delta_);
     }
 
     /**
@@ -294,8 +301,6 @@ public:
         Pushes a matrix to the deformed mesh.
     */
     void pushMatrix(mat4 matrix) {
-
-        // First do optimized multiplication.
         simd_mul(delta_, matrix);
         simd_broadcast_mesh(deformed_, delta_);
     }
