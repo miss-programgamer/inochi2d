@@ -21,7 +21,7 @@ import inteli;
     Returns:
         The result of the 2 matrices multiplied together.
 */
-mat4 mulm4m4(mat4 a, mat4 b) @nogc nothrow pure {
+mat4 simd_mul(mat4 a, mat4 b) @nogc nothrow pure {
     mat4 c;
     __m128 row1 = _mm_loadu_ps(&a.matrix[0][0]);
     __m128 row2 = _mm_loadu_ps(&a.matrix[1][0]);
@@ -42,35 +42,4 @@ mat4 mulm4m4(mat4 a, mat4 b) @nogc nothrow pure {
         _mm_store_ps(&c.matrix[i][0], row);
     }
     return c;
-}
-
-/**
-    Multiplies a 2D vector with a 4D matrix.
-
-    The 2D vector is promoted to a 4D vector,
-    with the w coordinate set to 1.
-
-    Params:
-        a = the vector
-        b = the matrix
-
-    Returns:
-        The result of multplying the vector with the matrix.
-*/
-VecT mulvm4(VecT)(VecT a, mat4 b) @nogc nothrow pure if (isVector!VecT) {
-    __m128 vec = _mm_set_ps(1, 0, 0, 0);
-    vec[0 .. VecT.dimension] = a.vector[0 .. $];
-
-    __m128 result;
-    foreach (row; 0 .. 4) {
-
-        __m128 acc = _mm_setzero_ps();
-        __m128 mat = _mm_loadu_ps(&b.matrix[row][0]);
-        acc = _mm_add_ps(acc, _mm_mul_ps(mat, vec));
-
-        acc = _mm_hadd_ps(acc, acc);
-        acc = _mm_hadd_ps(acc, acc);
-        _mm_store_ss(&result[row], acc);
-    }
-    return (*cast(VecT*)&result);
 }
