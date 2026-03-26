@@ -1,51 +1,18 @@
-module inochi2d.godot.puppet;
+module inochi2d.godot.resources.puppet;
 import godot.resource_format_loader;
 import godot.resource_loader;
 import godot.resource;
-import godot.node2d;
+import godot.variant;
 import godot;
 
 import inochi2d.puppet;
 import numem;
 
 /**
-    An Inochi2D Puppet.
-*/
-class Inochi2DPuppet : Node2D {
-private:
-@nogc:
-    Inochi2DPuppetResource resource_;
-    Puppet puppet_;
-
-protected:
-
-public:
-
-    /// Destructor
-    ~this() {
-        gd_delete(resource_);
-    }
-
-    /**
-        The puppet resource
-    */
-    @gd_export final @property Inochi2DPuppetResource puppet() => resource_;
-    @gd_export final @property void puppet(Inochi2DPuppetResource value) {
-        if (puppet_)
-            nogc_delete(puppet_);
-
-        this.resource_ = gde_refswap(resource_, value);
-        if (resource_) {
-            this.puppet_ = resource_.realize();
-        }
-    }
-}
-mixin GodotClass!Inochi2DPuppet;
-
-/**
     A resource for an Inochi2D Puppet
 */
-class Inochi2DPuppetResource : Resource {
+@class_name("Inochi2DPuppetResource")
+class PuppetResource : Resource {
 private:
 @nogc:
     PackedArray!ubyte data_;
@@ -103,21 +70,25 @@ public:
         return puppet.get();
     }
 }
-mixin GodotClass!Inochi2DPuppetResource;
+mixin GodotClass!PuppetResource;
 
 /**
     Puppet resource loader.
 */
 @gd_editor
-class Inochi2DPuppetResourceFormatLoader : ResourceFormatLoader {
+@class_name("Inochi2DPuppetResourceFormatLoader")
+class PuppetResourceFormatLoader : ResourceFormatLoader {
 private:
 @nogc:
-    __gshared Inochi2DPuppetResourceFormatLoader __instance;
+    __gshared PuppetResourceFormatLoader __instance;
 
 public:
 
     /**
         Gets the list of extensions for files this loader is able to read.
+
+        Returns:
+            A list of file extensions that this loader supports.
     */
     override PackedArray!String getRecognizedExtensions_() {
         PackedArray!String str;
@@ -127,18 +98,51 @@ public:
         return str;
     }
 
+    /**
+        Tells Godot whether this format loader handles the given type.
+
+        Params:
+            type = The name of the resource type to query.
+        
+        Returns:
+            $(D true) if this loader handles the given type,
+            $(D false) otherwise.
+    */
     override bool handlesType_(StringName type) {
-        return type == "Inochi2DPuppetResource";
+        return type == classNameOf!PuppetResource;
     }
 
+    /**
+        Gets the resource type to create for a given path string.
+
+        Params:
+            path = The path to the file that is to be loaded.
+
+        Returns:
+            The name of the resource that should be loaded,
+            or a nil string if that file extension is not handled.
+    */
     override String getResourceType_(String path) {
         if (path.endsWith(".inp") || path.endsWith(".inx"))
-            return String("Inochi2DPuppetResource");
+            return String(classNameOf!PuppetResource);
         return String.init;
     }
 
-    override Variant load_(String path, String originalpath, bool usesubthreads, int cachemode) {
-        if (Inochi2DPuppetResource res = gd_new!Inochi2DPuppetResource) {
+    /**
+        Loads the given resource from the given path.
+
+        Params:
+            path =          The path to the file to load.
+            originalpath =  The original path of the file.
+            usesubthreads = Whether to use sub-threads.
+            cachemode =     The caching mode.
+        
+        Returns:
+            A variant wrapping a referenced resource on success,
+            $(D Variant.init) otherwise.
+    */
+    override Variant load_(String path, String originalpath, bool usesubthreads, long cachemode) {
+        if (PuppetResource res = gd_new!PuppetResource) {
             if (res.loadFile(path))
                 return Variant(gde_ref(res));
         }
@@ -146,15 +150,15 @@ public:
     }
 
     /**
-        Special callback
+        Special callback that is called by nugodot after all types have been loaded.
     */
     static void __gde_postregistration() {
-        __instance = gd_new!Inochi2DPuppetResourceFormatLoader();
+        __instance = gd_new!PuppetResourceFormatLoader();
         ResourceLoader.instance.addResourceFormatLoader(__instance, true);
     }
 
     /**
-        Special callback
+        Special callback that is called by nugodot before all types get unloaded.
     */
     static void __gde_preunregistration() {
         ResourceLoader.instance.removeResourceFormatLoader(__instance);
@@ -162,4 +166,4 @@ public:
     }
     
 }
-mixin GodotClass!Inochi2DPuppetResourceFormatLoader;
+mixin GodotClass!PuppetResourceFormatLoader;
