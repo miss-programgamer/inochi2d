@@ -7,10 +7,21 @@
     Authors: Luna Nielsen
 */
 module inochi2d.cffi;
+import inochi2d.core.guid;;
 import numem;
 
 version (IN_DYNLIB) :
 extern (C) export @nogc:
+
+/**
+    A GUID
+*/
+alias in_guid_t = ubyte[GUID.sizeof];
+
+/**
+    A nil GUID.
+*/
+enum IN_GUID_NIL = GUID.nil;
 
 /**
     Retains a reference to a Inochi2D Object.

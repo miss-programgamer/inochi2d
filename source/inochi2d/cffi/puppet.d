@@ -8,6 +8,7 @@
 */
 module inochi2d.cffi.puppet;
 import inochi2d.cffi.render;
+import inochi2d.cffi.nodes;
 import inochi2d.cffi.eh;
 import inochi2d.puppet;
 import inochi2d.param;

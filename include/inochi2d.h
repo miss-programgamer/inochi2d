@@ -51,6 +51,24 @@ typedef struct in_vtxdata_t {
     in_vec2_t uv;
 } in_vtxdata_t;
 
+/**
+    A GUID.
+*/
+typedef struct in_guid_t {
+    uint8_t data[16];
+} in_guid_t;
+
+//
+//          STATIC DEFINITIONS
+//
+
+/**
+    A nil GUID.
+*/
+#define IN_GUID_NIL in_guid_t({0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0})
+
+
+
 //
 //          OPAQUE TYPES
 //
@@ -69,6 +87,16 @@ typedef struct in_texture_cache_t in_texture_cache_t;
     A parameter.
 */
 typedef struct in_parameter_t in_parameter_t;
+
+/**
+    A node.
+*/
+typedef struct in_node_t in_node_t;
+
+/**
+    A mesh effect.
+*/
+typedef struct in_mesh_effect_t in_mesh_effect_t;
 
 /**
     A resource that can be transferred between CPU and GPU.
@@ -294,6 +322,243 @@ in_parameter_t** I2D_CALL in_puppet_get_parameters(in_puppet_t* obj, uint32_t* c
         The drawlist used by the puppet.
 */
 in_drawlist_t* I2D_CALL in_puppet_get_drawlist(in_puppet_t* obj);
+
+//
+//              NODES
+//
+
+/**
+    Gets the root node of the puppet.
+
+    Params:
+        obj = The puppet object.
+
+    Returns:
+        The root node of the object.
+*/
+in_node_t* I2D_CALL in_puppet_get_root_node(in_puppet_t* obj);
+
+/**
+    Gets the puppet that the node belongs to.
+
+    Params:
+        self = The node to operate on.
+    
+    Returns:
+        The parent puppet or $(D null) if puppet is unrooted.
+*/
+in_puppet_t* I2D_CALL in_node_get_puppet(in_node_t* self);
+
+/**
+    Gets the parent node of the given node.
+
+    Params:
+        self = The node to operate on.
+    
+    Returns:
+        Pointer to the parent node, or $(D null)
+        if the node is the root of its tree.
+*/
+in_node_t* I2D_CALL in_node_get_parent(in_node_t* self);
+
+/**
+    Sets the parent of the given node.
+
+    Params:
+        self =      The node to operate on.
+        parent =    The parent to set, or $(D null).
+*/
+void I2D_CALL in_node_set_parent(in_node_t* self, in_node_t* parent);
+
+/**
+    Gets the child nodes of the given node.
+
+    Params:
+        self =  The node to operate on.
+        count = Where to store the node count.
+
+    Returns:
+        A node-owned array of nodes.
+*/
+in_node_t** I2D_CALL in_node_get_children(in_node_t* self, uint32_t* count);
+
+/**
+    Gets the name of the node.
+
+    Params:
+        self = The node to operate on.
+
+    Returns:
+        The name of the node.
+*/
+const char* I2D_CALL in_node_get_name(in_node_t* node);
+
+/**
+    Gets the type of the node.
+
+    Params:
+        self = The node to operate on.
+
+    Returns:
+        The type id of the node.
+*/
+const char* I2D_CALL in_node_get_type(in_node_t* self);
+
+/**
+    Gets the GUID of the node.
+
+    Params:
+        self = The node to operate on.
+
+    Returns:
+        The GUID of the node.
+*/
+in_guid_t I2D_CALL in_node_get_guid(in_node_t* self);
+
+/**
+    Gets whether the node is enabled.
+
+    Params:
+        self = The node to operate on.
+
+    Returns:
+        $(D true) if the node is enabled,
+        $(D false) otherwise.
+*/
+bool I2D_CALL in_node_get_enabled(in_node_t* self);
+
+/**
+    Sets whether the node is enabled.
+
+    Params:
+        self =  The node to operate on.
+        value = The value to set.
+*/
+void I2D_CALL in_node_set_enabled(in_node_t* self, bool value);
+
+/**
+    Gets the local z-sorting index of the given node.
+
+    Params:
+        self = The node to operate on.
+
+    Returns:
+        The local z-sorting value of the given node,
+        or NaN value if the node reference was invalid. 
+*/
+float I2D_CALL in_node_get_local_zsort(in_node_t* self);
+
+/**
+    Gets the z-sorting index of the given node.
+
+    Params:
+        self = The node to operate on.
+
+    Returns:
+        The z-sorting value of the given node,
+        or NaN value if the node reference was invalid. 
+*/
+float I2D_CALL in_node_get_zsort(in_node_t* self);
+
+/**
+    Gets whether the node's transform is locked to the root
+    node.
+
+    Params:
+        self = The node to operate on.
+
+    Returns:
+        $(D true) if the transformation of the node is locked
+        to the root node, $(D false) otherwise.
+*/
+bool I2D_CALL in_node_get_lock_to_root(in_node_t* self);
+
+/**
+    Sets whether the node's transform is locked to the root
+    node.
+
+    Params:
+        self =  The node to operate on.
+        value = The value to set.
+*/
+void I2D_CALL in_node_set_lock_to_root(in_node_t* self, bool value);
+
+/**
+    Gets the depth of the node in the node tree.
+
+    Params:
+        self =  The node to operate on.
+    
+    Returns:
+        The depth of the node in the tree.
+*/
+uint32_t I2D_CALL in_node_get_tree_depth(in_node_t* self);
+
+/**
+    Gets whether the node has the given property.
+
+    Params:
+        self =  The node to operate on.
+        key =   Name of the property to query.
+    
+    Returns:
+        $(D true) if the node has the given property,
+        $(D false) otherwise.
+*/
+bool I2D_CALL in_node_has_property(in_node_t* self, const char* key);
+
+/**
+    Gets the value of the given property.
+
+    Params:
+        self =  The node to operate on.
+        key =   Name of the property to query.
+    
+    Returns:
+        The value of the property.
+*/
+float I2D_CALL in_node_get_property(in_node_t* self, const char* key);
+
+/**
+    Gets the default value of the given property.
+
+    Params:
+        self =  The node to operate on.
+        key =   Name of the property to query.
+    
+    Returns:
+        The default value of the property.
+*/
+float I2D_CALL in_node_get_property_default(in_node_t* self, const char* key);
+
+/**
+    Sets the value of the given property.
+
+    Params:
+        self =  The node to operate on.
+        key =   Name of the property to query.
+        value = Value to assign the property to.
+    
+    Returns:
+        The default value of the property.
+*/
+void I2D_CALL in_node_set_property(in_node_t* self, const char* key, float value) ;
+
+//
+//              PART & MESH EFFECT
+//
+
+/**
+    Gets the mesh effects attached to a node.
+
+    Params:
+        self =  The node to operate on.
+        count = Variablt to store the effect count in.
+    
+    Returns:
+        A Part-owned array of mesh effects.
+*/
+in_mesh_effect_t** I2D_CALL in_node_part_get_mesh_effects(in_node_t* self, uint32_t* count);
 
 //
 //              PARAMETERS
