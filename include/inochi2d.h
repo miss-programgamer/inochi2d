@@ -328,6 +328,17 @@ in_drawlist_t* I2D_CALL in_puppet_get_drawlist(in_puppet_t* obj);
 //
 
 /**
+    Creates a new basic node, optionally parented to the given node.
+
+    Params:
+        parent = The parent of the newly created node, or null.
+    
+    Returns:
+        The newly allocated node.
+*/
+in_node_t* I2D_CALL in_node_new(in_node_t* parent);
+
+/**
     Gets the root node of the puppet.
 
     Params:
