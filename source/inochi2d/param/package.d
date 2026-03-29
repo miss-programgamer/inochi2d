@@ -11,6 +11,7 @@ import inochi2d.puppet;
 import inochi2d.nodes;
 import inochi2d.core;
 import inochi2d.core.serde;
+import numem.core.memory;
 import nulib.collections;
 import nulib.string;
 import numem;
@@ -418,7 +419,7 @@ public:
         Flip the mapping across an axis
     */
     void reverseAxis(uint axis) {
-        in_reverse(axisPoints[axis]);
+        nu_reverse(axisPoints[axis][0 .. $]);
         foreach (ref i; axisPoints[axis]) {
             i = 1 - i;
         }

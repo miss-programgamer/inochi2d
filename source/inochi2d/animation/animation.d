@@ -4,6 +4,7 @@ import inochi2d.param;
 import inochi2d.core;
 import inmath;
 import inmath.interpolate;
+import numem.sorting;
 import numem;
 
 /**
@@ -251,9 +252,7 @@ public:
         Updates the order of the keyframes
     */
     void updateFrames() {
-        import inochi2d.core.sorting : in_sort;
-
-        in_sort!((a, b) => a.frame < b.frame)(frames);
+        nu_sort!((a, b) => a.frame < b.frame)(frames);
     }
 }
 

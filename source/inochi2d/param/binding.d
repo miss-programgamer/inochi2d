@@ -12,6 +12,7 @@ import inochi2d.puppet;
 import inochi2d.nodes;
 import inochi2d.core;
 import nulib.collections;
+import numem.core.memory;
 import numem;
 
 /**
@@ -431,13 +432,13 @@ public:
     */
     override void reverseAxis(uint axis) {
         if (axis == 0) {
-            in_reverse(values);
-            in_reverse(isSet_);
+            nu_reverse(values);
+            nu_reverse(isSet_);
         } else {
             foreach (ref i; values)
-                in_reverse(i);
+                nu_reverse(i);
             foreach (ref i; isSet_)
-                in_reverse(i);
+                nu_reverse(i);
         }
     }
 

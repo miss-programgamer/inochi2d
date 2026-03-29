@@ -294,7 +294,7 @@ void findVisuals(Node root, ref Visual[] visuals, bool recurseDelegates = false,
     }
 
     if (!append)
-        in_clear_slice(visuals);
+        nu_cleara(visuals);
 
     // Find all visuals in children.
     foreach(child; root.children) {

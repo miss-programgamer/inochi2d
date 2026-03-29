@@ -14,7 +14,6 @@ public import inochi2d.core.mesh;
 public import inochi2d.core.guid;
 public import inochi2d.core.math;
 public import inochi2d.core.property;
-public import inochi2d.core.sorting;
 public import inochi2d.core.registry;
 public import inochi2d.core.memory;
 

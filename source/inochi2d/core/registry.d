@@ -97,7 +97,6 @@ public:
     */
     void register(X)() {
         import numem.core.traits : getUDAs, hasUDA;
-
         static assert(hasUDA!(X, TypeId), X.stringof ~ " does not have a TypeId UDA!");
 
         alias _tids = getUDAs!(X, TypeId);

@@ -20,7 +20,7 @@ dependency "intel-intrinsics" version="~>1.12"
 
 // Numem
 dependency "nulib" version=">=0.3.12"
-dependency "numem" version=">=1.6.4"
+dependency "numem" version=">=1.6.5"
 
 stringImportPaths "shaders/"
     
