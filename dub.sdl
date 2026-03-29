@@ -27,7 +27,7 @@ stringImportPaths "shaders/"
 copyFiles "LICENSE"
 
 // SIMD optimization flags.
-dflags "-mattr=+sse3,+sse4.1,+sse4.2,+avx" platform="x86_64"
+dflags "-mattr=+sse3,+sse4.1,+sse4.2" platform="x86_64"
 dflags "-mattr=+neon,+crc" platform="aarch64"
 
 // Base configuration.

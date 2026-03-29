@@ -19,11 +19,6 @@ public import inochi2d.core.math.simd.mesh;
 enum IN_SIMD_THRESHOLD = 100;
 
 /**
-    The minimum threshold size of a mesh before 256-bit SIMD optimisations kick in.
-*/
-enum IN_AVX_THRESHOLD = IN_SIMD_THRESHOLD*10;
-
-/**
     An identity 4-dimensional vector.
 */
 static const __m128 IN_SIMD_IDENTITY = __m128([0, 0, 0, 1]);

@@ -24,13 +24,56 @@ import inteli;
 */
 void simd_deform(ref vec2[] mesh, vec2[] deform) @nogc nothrow {
     size_t w_length = nu_min(mesh.length, deform.length);
+    static if (!AVXSizedVectorsAreEmulated) {
 
-    // NOTE:    SSE version of the algorithm.
-    //          This algorithm loads 128 bits of mesh data at a time, then deforms it.
-    //          Value is stored unaligned to memory.
-    //          
-    // TODO:    Add aligned version?
-    static if (!SSESizedVectorsAreEmulated) {
+        // NOTE:    AVX version of the algorithm.
+        //          This algorithm loads 256 bits of mesh data at a time, then deforms it.
+        //          Value is stored unaligned to memory.
+        //          
+        // TODO:    Add aligned version?
+        if (w_length >= IN_SIMD_THRESHOLD) {
+            size_t i = 0;
+            for (; i < nu_aligndown(w_length, 4); i += 4) {
+
+                // Get 4 values at the same from both the mesh and deform.
+                __m256 m_xyzwuvst = _mm256_loadu_ps(mesh[i].ptr);
+                __m256 d_xyzwuvst = _mm256_loadu_ps(deform[i].ptr);
+
+                // Add and store 2 vectors at the same time.
+                __m256 xyzwuvst = _mm256_add_ps(m_xyzwuvst, d_xyzwuvst);
+                _mm256_storeu_ps(cast(float*)mesh[i].ptr, xyzwuvst);
+            }
+
+            // SSE for 2-3 remaining values.
+            if (i < nu_aligndown(w_length, 2)) {
+
+                // Get 4 values at the same from both the mesh and deform.
+                __m128 m_xyzw = _mm_loadu_ps(mesh[i].ptr);
+                __m128 d_xyzw = _mm_loadu_ps(deform[i].ptr);
+
+                // Add and store 2 vectors at the same time.
+                __m128 xyzw = _mm_add_ps(m_xyzw, d_xyzw);
+                _mm_storeu_ps(cast(float*)mesh[i].ptr, xyzw);
+
+                i += 2;
+            }
+
+            // Tail iteration to finalize the broadcast
+            if (i < w_length) {
+                __m128 m_xy01 = _mm_loadl_pi(IN_SIMD_IDENTITY, cast(const(__m64)*)mesh[i].ptr);
+                __m128 d_xy01 = _mm_loadl_pi(IN_SIMD_IDENTITY, cast(const(__m64)*)deform[i].ptr);
+                __m128 xy01 = _mm_add_ps(m_xy01, d_xy01);
+                _mm_storel_pi(cast(__m64*)mesh[i].ptr, xy01);
+            }
+            return;
+        }
+    } else static if (!SSESizedVectorsAreEmulated) {
+
+        // NOTE:    SSE version of the algorithm.
+        //          This algorithm loads 128 bits of mesh data at a time, then deforms it.
+        //          Value is stored unaligned to memory.
+        //          
+        // TODO:    Add aligned version?
         if (w_length >= IN_SIMD_THRESHOLD) {
             size_t i = 0;
             for (; i < nu_aligndown(w_length, 2); i += 2) {
