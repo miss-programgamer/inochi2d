@@ -68,6 +68,7 @@ private:
     __TypeMap!(void*, TypeId) typeIdStore;
     __TypeMap!(string, factory_t) factoryStoreS;
     __TypeMap!(uint, factory_t) factoryStoreN;
+    vector!size_t sizeStore;
 
 public:
 
@@ -75,6 +76,18 @@ public:
         Arguments
     */
     alias ArgsT = Args;
+
+    /**
+        The alignment needed to store registered objects in sequential memory.
+    */
+    @property size_t alignment() {
+        size_t result = 0;
+        foreach(sz; sizeStore)
+            if (sz > result)
+                result = sz;
+            
+        return result;
+    }
 
     /**
         Registers the given type in the type registry.
@@ -89,6 +102,7 @@ public:
 
         alias _tids = getUDAs!(X, TypeId);
         typeIdStore[cast(void*)typeid(X)] = _tids[0];
+        sizeStore ~= AllocSize!X;
 
         static if (!hasUDA!(X, TypeIdAbstract)) {
             factoryStoreS[_tids[0].sid] = &__construct!X;
