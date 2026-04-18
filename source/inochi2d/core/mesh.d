@@ -255,8 +255,7 @@ public:
     /**
         Constructs a new empty DeformedMesh
     */
-    this() {
-    }
+    this() { }
 
     /**
         Deform the mesh by the given amount.
