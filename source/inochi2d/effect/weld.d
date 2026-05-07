@@ -22,7 +22,7 @@ import nulib;
     An effect that welds other meshes to this mesh, forcing
     the welded meshes to be dragged towards paired vertices
 */
-@TypeId("MeshEffect", 0x0001)
+@TypeId("WeldEffect", 0x0001)
 class WeldEffect : MeshEffect {
 private:
 @nogc:
