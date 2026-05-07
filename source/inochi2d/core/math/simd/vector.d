@@ -201,3 +201,70 @@ unittest {
         assert(value == vec2(1.0, 1.0));
     }
 }
+
+/**
+    Multiplies all vertices in a given mesh with the given weights.
+
+    Params:
+        mesh = The mesh to scale based on weight.
+        weights = The weights to scale by.
+*/
+void simd_mul_weight(ref vec2[] mesh, ref float[] weights) @nogc nothrow {
+    size_t w_length = nu_min(mesh.length, weights.length);
+    
+    __gshared const __m128i WEIGHT_OFFSETS = __m128i([0, 0, 1, 1]);
+    
+    // NOTE:    SSE version of the algorithm.
+    //          This algorithm loads 128 bits of mesh data at a time, then deforms it.
+    //          Value is stored unaligned to memory.
+    //          
+    // TODO:    Add aligned version?
+    static if (!SSESizedVectorsAreEmulated) {
+        if (w_length >= IN_SIMD_THRESHOLD) {
+
+            // SIMD version
+            size_t i = 0;
+            for (; i < nu_aligndown(w_length, 2); i += 2) {
+
+                // Load weights and vector
+                __m128 w0011 = _mm_i32gather_ps!(4)(cast(const(float)*)&weights[i], WEIGHT_OFFSETS);
+                __m128 xyzw = _mm_load_ps(cast(const(float)*)mesh[i].ptr);
+
+                // Perform matrix multiplication and
+                // Store 2 multiplied elements at once to mesh.
+                __m128 weighted = _mm_mul_ps(xyzw, w0011);
+                _mm_storeu_ps(cast(float*)mesh[i].ptr, weighted);
+
+            }
+
+            // Tail iteration to finalize the multiplication
+            if (i < w_length) {
+                __m128 ww01 = _mm_loadl_pi(IN_SIMD_IDENTITY, cast(const(__m64)*)&weights[i]);
+                __m128 xy01 = _mm_loadl_pi(IN_SIMD_IDENTITY, cast(const(__m64)*)mesh[i].ptr);
+
+                __m128 weighted = _mm_mul_ps(xy01, ww01);
+                _mm_storel_pi(cast(__m64*)mesh[i].ptr, weighted);
+            }
+        }
+        return;
+    }
+
+    // Non-SIMD version
+    foreach(i; 0..w_length) {
+        mesh[i] = mesh[i] * weights[i];
+    }
+}
+
+@("simd_mul_weight")
+unittest {
+    vec2[] array1 = new vec2[10_000];
+    array1[] = vec2(0.5);
+
+    float[] weights = new float[10_000];
+    weights[] = 0.5;
+
+    simd_mul_weight(array1, weights);
+    foreach(i, value; array1) {
+        assert(value == vec2(0.25, 0.25));
+    }
+}
