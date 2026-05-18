@@ -1,6 +1,6 @@
-# AGENTS.md - Development guidelines for Inochi2D
+# CLAUDE.md - Development guidelines for Inochi2D
 
-This file provides guidance for AI agents working on the Inochi2D codebase.
+This file provides guidance for Claude AI agents working on the Inochi2D codebase.
 
 ## Project Overview
 
