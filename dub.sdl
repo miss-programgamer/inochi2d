@@ -23,8 +23,7 @@ dependency "nulib:io" version="*"
 dependency "numem" version=">=1.6.5"
 
 // NuRT
-dependency "nurt" path="../../nurt"
-#subConfiguration "nurt" "nurt-disabled"
+dependency "nurt" version=">=0.2.2"
 
 stringImportPaths "shaders/"
     
