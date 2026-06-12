@@ -18,7 +18,7 @@ dependency "numath" version=">=0.5.0"
 dependency "imagefmt" version="~>2.1"
 
 // Numem
-dependency "nulib" version=">=0.3.12"
+dependency "nulib" version=">=0.4.0"
 dependency "nulib:io" version="*"
 dependency "numem" version=">=1.6.5"
 
