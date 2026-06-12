@@ -9,7 +9,7 @@
 module inochi2d.core.render.texture;
 import inochi2d.core.render.resource;
 import nulib.io.stream;
-import inmath;
+import numath;
 import numem;
 
 /**

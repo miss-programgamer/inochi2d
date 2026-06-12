@@ -14,8 +14,6 @@ import nulib.string;
 import nulib.math;
 import numem;
 
-import core.stdc.stdio : printf;
-
 @nogc:
 
 /**
@@ -34,8 +32,6 @@ Result!DataNode readJson(Stream stream) @nogc {
 
     if (auto err = reader.readJsonImpl(result, reader.stream.tell, reader.stream.length))
         return error!DataNode(err);
-    printf("Read complete\n");
-
     return ok(result.move());
 }
 
@@ -155,7 +151,7 @@ bool isNumberChar(char c) {
 }
 
 string readJsonImpl()(StreamReader reader, ref DataNode node, size_t start, size_t length) {
-    import nulib.conv : to_floating;
+    import nulib.conv : parseFloat;
 
     reader.skipWhitespace();
     if (reader.stream.tell() >= start+length)
@@ -169,7 +165,7 @@ string readJsonImpl()(StreamReader reader, ref DataNode node, size_t start, size
             if (isNumberChar(c)) {
                 
                 auto valueStr = reader.readJsonNumber();
-                node = DataNode(to_floating!double(valueStr));
+                node = DataNode(parseFloat!double(valueStr));
                 nu_freea(valueStr);
                 return null;
             }

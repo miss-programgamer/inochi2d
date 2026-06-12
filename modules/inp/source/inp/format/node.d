@@ -441,42 +441,6 @@ public:
     ref DataNode opIndex(size_t idx) {
         return dataStore.array_.opIndex(idx);
     }
-
-    /**
-        Converts the DataNode to a string.
-    */
-    string toString() const @trusted pure nothrow {
-        import nulib.conv : to_string;
-        final switch(dataType) {
-            
-            case DataNodeType.string_:
-                return dataStore.string_;
-            
-            case DataNodeType.boolean_:
-                return dataStore.boolean_ ? "true" : "false";
-            
-            case DataNodeType.int_:
-                return to_string(dataStore.int_);
-            
-            case DataNodeType.uint_:
-                return to_string(dataStore.uint_);
-            
-            case DataNodeType.float_:
-                return to_string(dataStore.float_);
-            
-            case DataNodeType.array_:
-                return "<array>";
-            
-            case DataNodeType.object_:
-                return "<object>";
-            
-            case DataNodeType.blob_:
-                return "<blob>";
-            
-            case DataNodeType.undefined:
-                return "<undefined>";
-        }
-    }
 }
 
 @("Create node.")

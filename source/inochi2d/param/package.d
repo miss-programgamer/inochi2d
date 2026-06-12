@@ -330,7 +330,7 @@ public:
     }
 
     void pushIOffsetAxis(int axis, float offset, ParamMergeMode mode = ParamMergeMode.passthrough, float weight = 1) {
-        this.value.vector[axis] = offset;
+        this.value.data[axis] = offset;
     }
 
     /**

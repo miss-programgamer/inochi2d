@@ -7,14 +7,13 @@
     Authors: Luna Nielsen
 */
 module inp.format.inp1.reader;
+import inp.format.json.reader;
 import inp.format.node;
 import inp.format.inp1;
 import nulib.io.stream.rw;
 import nulib.io.stream;
 import nulib.math;
 import numem;
-import inp.format.json.reader;
-import core.stdc.stdio : printf;
 
 import inp.format : 
     INP_TAG_PAYLOAD, 

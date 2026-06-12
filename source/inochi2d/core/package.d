@@ -18,4 +18,3 @@ public import inochi2d.core.registry;
 public import inochi2d.core.memory;
 
 import inochi2d.core.math;
-import std.stdio;

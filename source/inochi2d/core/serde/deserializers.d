@@ -2,9 +2,7 @@ module inochi2d.core.serde.deserializers;
 import inochi2d.core.serde;
 import inochi2d.core.math;
 import inochi2d.core;
-import inmath.util;
-import std.json;
-import std.traits;
+import numath;
 
 /**
     Interface for classes that can be deserialized to JSON with custom code

@@ -12,4 +12,4 @@ public import inochi2d.animation.animation;
 
 import inochi2d.puppet;
 import inochi2d;
-import inmath;
+import numath;

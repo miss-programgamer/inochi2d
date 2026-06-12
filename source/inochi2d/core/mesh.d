@@ -11,8 +11,8 @@ import inochi2d.core.render.state;
 import inochi2d.core.serde;
 import inochi2d.core.math.simd;
 import inochi2d.core.math.trig;
+import numath;
 import numem;
-import inmath;
 
 version (IN_VEC3_POSITION)
     alias vtx_t = vec3;

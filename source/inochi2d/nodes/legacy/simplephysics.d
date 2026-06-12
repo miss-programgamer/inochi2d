@@ -14,9 +14,6 @@ import inochi2d.core.phys;
 import inochi2d;
 import numem;
 
-import std.algorithm.sorting;
-import std.exception;
-
 // Allow disabling legacy node.
 version (IN_NO_LEGACY) {
 } else:
@@ -467,8 +464,7 @@ public:
         // The origin here is the anchor. This gives us the local angle.
         auto localPos4 = localOnly ?
             vec4(output.x, output.y, 0, 1) : (transform.matrix.inverse * vec4(output.x, output.y, 0, 1));
-        vec2 localAngle = vec2(localPos4.x, localPos4.y);
-        localAngle.normalize();
+        vec2 localAngle = vec2(localPos4.x, localPos4.y).normalized;
 
         // Figure out the relative length. We can work this out directly in global space.
         auto relLength = output.distance(anchor) / this.finalLength;

@@ -5,7 +5,6 @@ module inochi2d.core.math.deform;
 import inochi2d.core;
 import inochi2d.core.math;
 import inochi2d;
-import std.exception : enforce;
 import nulib.collections.vector;
 import numem;
 
@@ -78,25 +77,25 @@ public:
 struct Deformation {
     vec2[] vertexOffsets;
 
-    this(ref return scope Deformation other) @trusted @nogc nothrow {
+    this(ref return scope Deformation other) @trusted @nogc nothrow pure {
         this.vertexOffsets = vertexOffsets.nu_dup();
     }
 
-    this(vec2[] data) @trusted @nogc nothrow {
+    this(vec2[] data) @trusted @nogc nothrow pure {
         this.update(data);
     }
 
-    void update(vec2[] points) @trusted @nogc nothrow {
+    void update(vec2[] points) @trusted @nogc nothrow pure {
         vertexOffsets = vertexOffsets.nu_resize(points.length);
         vertexOffsets[0 .. points.length] = points[0 .. $];
     }
 
-    void clear(size_t length) @trusted @nogc nothrow {
+    void clear(size_t length) @trusted @nogc nothrow pure {
         vertexOffsets = vertexOffsets.nu_resize(length);
         vertexOffsets[0 .. $] = vec2.zero;
     }
 
-    Deformation opUnary(string op : "-")() @trusted nothrow {
+    Deformation opUnary(string op : "-")() @trusted nothrow pure {
         Deformation new_;
 
         new_.vertexOffsets.length = vertexOffsets.length;
@@ -107,144 +106,136 @@ struct Deformation {
         return new_;
     }
 
-    Deformation opBinary(string op : "*", T)(T other) @trusted @nogc nothrow {
-        return assumeNoThrowNoGC((Deformation self, T other) {
-            static if (is(T == Deformation)) {
-                Deformation new_;
+    Deformation opBinary(string op : "*", T)(T other) @trusted @nogc nothrow pure {
+        static if (is(T == Deformation)) {
+            Deformation new_;
 
-                new_.vertexOffsets.length = self.vertexOffsets.length;
-                foreach (i; 0 .. self.vertexOffsets.length) {
-                    new_.vertexOffsets[i] = self.vertexOffsets[i] * other.vertexOffsets[i];
-                }
-
-                return new_;
-            } else static if (is(T == vec2)) {
-                Deformation new_;
-
-                new_.vertexOffsets.length = self.vertexOffsets.length;
-                foreach (i; 0 .. self.vertexOffsets.length) {
-                    new_.vertexOffsets[i] = self.vertexOffsets[i] * other;
-                }
-
-                return new_;
-            } else {
-                Deformation new_;
-
-                new_.vertexOffsets.length = self.vertexOffsets.length;
-                foreach (i; 0 .. self.vertexOffsets.length) {
-                    new_.vertexOffsets[i] = self.vertexOffsets[i] * other;
-                }
-
-                return new_;
+            new_.clear(this.vertexOffsets.length);
+            foreach (i; 0 .. this.vertexOffsets.length) {
+                new_.vertexOffsets[i] = this.vertexOffsets[i] * other.vertexOffsets[i];
             }
-        }, this, other);
+
+            return new_;
+        } else static if (is(T == vec2)) {
+            Deformation new_;
+
+            new_.clear(this.vertexOffsets.length);
+            foreach (i; 0 .. this.vertexOffsets.length) {
+                new_.vertexOffsets[i] = this.vertexOffsets[i] * other;
+            }
+
+            return new_;
+        } else {
+            Deformation new_;
+
+            new_.clear(this.vertexOffsets.length);
+            foreach (i; 0 .. this.vertexOffsets.length) {
+                new_.vertexOffsets[i] = this.vertexOffsets[i] * other;
+            }
+
+            return new_;
+        }
     }
 
-    Deformation opBinaryRight(string op : "*", T)(T other) @trusted nothrow {
-        return assumeNoThrowNoGC((Deformation self, T other) {
-            static if (is(T == mat4)) {
-                
-                // Optimized matrix multiplication
-                Deformation new_;
-                new_.vertexOffsets = self.vertexOffsets.nu_dup();
-                simd_mul(new_.vertexOffsets, other);
-                
-                return new_;  
-            } static if (is(T == Deformation)) {
-                Deformation new_;
+    Deformation opBinaryRight(string op : "*", T)(T other) @trusted nothrow pure {
+        static if (is(T == mat4)) {
+            
+            // Optimized matrix multiplication
+            Deformation new_;
+            new_.vertexOffsets = self.vertexOffsets.nu_dup();
+            simd_mul(new_.vertexOffsets, other);
+            
+            return new_;  
+        } static if (is(T == Deformation)) {
+            Deformation new_;
 
-                new_.vertexOffsets.length = self.vertexOffsets.length;
-                foreach (i; 0 .. self.vertexOffsets.length) {
-                    new_.vertexOffsets[i] = other.vertexOffsets[i] * self.vertexOffsets[i];
-                }
-
-                return new_;
-            } else static if (is(T == vec2)) {
-                Deformation new_;
-
-                new_.vertexOffsets.length = self.vertexOffsets.length;
-                foreach (i; 0 .. self.vertexOffsets.length) {
-                    new_.vertexOffsets[i] = other * self.vertexOffsets[i];
-                }
-
-                return new_;
-            } else {
-                Deformation new_;
-
-                new_.vertexOffsets.length = self.vertexOffsets.length;
-                foreach (i; 0 .. self.vertexOffsets.length) {
-                    new_.vertexOffsets[i] = other * self.vertexOffsets[i];
-                }
-
-                return new_;
+            new_.clear(this.vertexOffsets.length);
+            foreach (i; 0 .. this.vertexOffsets.length) {
+                new_.vertexOffsets[i] = other.vertexOffsets[i] * this.vertexOffsets[i];
             }
-        }, this, other);
+
+            return new_;
+        } else static if (is(T == vec2)) {
+            Deformation new_;
+
+            new_.clear(this.vertexOffsets.length);
+            foreach (i; 0 .. this.vertexOffsets.length) {
+                new_.vertexOffsets[i] = other * this.vertexOffsets[i];
+            }
+
+            return new_;
+        } else {
+            Deformation new_;
+
+            new_.clear(this.vertexOffsets.length);
+            foreach (i; 0 .. this.vertexOffsets.length) {
+                new_.vertexOffsets[i] = other * this.vertexOffsets[i];
+            }
+
+            return new_;
+        }
     }
 
-    Deformation opBinary(string op : "+", T)(T other) @trusted nothrow {
-        return assumeNoThrowNoGC((Deformation self, T other) {
-            static if (is(T == Deformation)) {
-                Deformation new_;
+    Deformation opBinary(string op : "+", T)(T other) @trusted nothrow pure {
+        static if (is(T == Deformation)) {
+            Deformation new_;
 
-                new_.vertexOffsets.length = self.vertexOffsets.length;
-                foreach (i; 0 .. self.vertexOffsets.length) {
-                    new_.vertexOffsets[i] = self.vertexOffsets[i] + other.vertexOffsets[i];
-                }
-
-                return new_;
-            } else static if (is(T == vec2)) {
-                Deformation new_;
-
-                new_.vertexOffsets.length = self.vertexOffsets.length;
-                foreach (i; 0 .. self.vertexOffsets.length) {
-                    new_.vertexOffsets[i] = self.vertexOffsets[i] + other;
-                }
-
-                return new_;
-            } else {
-                Deformation new_;
-
-                new_.vertexOffsets.length = self.vertexOffsets.length;
-                foreach (i; 0 .. self.vertexOffsets.length) {
-                    new_.vertexOffsets[i] = self.vertexOffsets[i] + other;
-                }
-
-                return new_;
+            new_.clear(this.vertexOffsets.length);
+            foreach (i; 0 .. this.vertexOffsets.length) {
+                new_.vertexOffsets[i] = this.vertexOffsets[i] + other.vertexOffsets[i];
             }
-        }, this, other);
+
+            return new_;
+        } else static if (is(T == vec2)) {
+            Deformation new_;
+
+            new_.clear(this.vertexOffsets.length);
+            foreach (i; 0 .. this.vertexOffsets.length) {
+                new_.vertexOffsets[i] = this.vertexOffsets[i] + other;
+            }
+
+            return new_;
+        } else {
+            Deformation new_;
+
+            new_.clear(this.vertexOffsets.length);
+            foreach (i; 0 .. this.vertexOffsets.length) {
+                new_.vertexOffsets[i] = this.vertexOffsets[i] + other;
+            }
+
+            return new_;
+        }
     }
 
-    Deformation opBinary(string op : "-", T)(T other) @trusted nothrow {
-        return assumeNoThrowNoGC((Deformation self, T other) {
-            static if (is(T == Deformation)) {
-                Deformation new_;
+    Deformation opBinary(string op : "-", T)(T other) @trusted nothrow pure {
+        static if (is(T == Deformation)) {
+            Deformation new_;
 
-                new_.vertexOffsets.length = self.vertexOffsets.length;
-                foreach (i; 0 .. self.vertexOffsets.length) {
-                    new_.vertexOffsets[i] = self.vertexOffsets[i] - other.vertexOffsets[i];
-                }
-
-                return new_;
-            } else static if (is(T == vec2)) {
-                Deformation new_;
-
-                new_.vertexOffsets.length = self.vertexOffsets.length;
-                foreach (i; 0 .. self.vertexOffsets.length) {
-                    new_.vertexOffsets[i] = self.vertexOffsets[i] - other;
-                }
-
-                return new_;
-            } else {
-                Deformation new_;
-
-                new_.vertexOffsets.length = self.vertexOffsets.length;
-                foreach (i; 0 .. self.vertexOffsets.length) {
-                    new_.vertexOffsets[i] = self.vertexOffsets[i] - other;
-                }
-
-                return new_;
+            new_.clear(this.vertexOffsets.length);
+            foreach (i; 0 .. this.vertexOffsets.length) {
+                new_.vertexOffsets[i] = this.vertexOffsets[i] - other.vertexOffsets[i];
             }
-        }, this, other);
+
+            return new_;
+        } else static if (is(T == vec2)) {
+            Deformation new_;
+
+            new_.clear(this.vertexOffsets.length);
+            foreach (i; 0 .. this.vertexOffsets.length) {
+                new_.vertexOffsets[i] = this.vertexOffsets[i] - other;
+            }
+
+            return new_;
+        } else {
+            Deformation new_;
+
+            new_.clear(this.vertexOffsets.length);
+            foreach (i; 0 .. this.vertexOffsets.length) {
+                new_.vertexOffsets[i] = this.vertexOffsets[i] - other;
+            }
+
+            return new_;
+        }
     }
 
     void onSerialize(ref DataNode data) @nogc {

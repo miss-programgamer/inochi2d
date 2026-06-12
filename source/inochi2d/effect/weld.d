@@ -13,7 +13,7 @@ import inochi2d.nodes.part;
 import inochi2d.nodes;
 import inochi2d.core;
 import inp.format;
-import inmath;
+import numath;
 import numem;
 import nulib;
 

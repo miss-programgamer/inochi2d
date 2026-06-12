@@ -12,8 +12,6 @@ import inochi2d.param;
 import inochi2d.animation;
 import inochi2d.core;
 import inp.format;
-import std.algorithm.sorting;
-import std.algorithm.mutation : SwapStrategy;
 import nulib.io.stream;
 import nulib;
 import numem;
@@ -146,7 +144,7 @@ private:
         // Legacy physics system.
         version (IN_LEGACY) {
             node.findNodes!SimplePhysics(drivers_);
-            driven_.clearContents();
+            driven_.clear();
             foreach (driver; drivers_) {
                 foreach (Parameter param; driver.affectedParameters)
                     driven_[param] = driver;

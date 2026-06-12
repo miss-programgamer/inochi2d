@@ -10,7 +10,7 @@ module inochi2d.nodes.deformer.latticedeformer;
 import inochi2d.nodes.deformer;
 import inochi2d.nodes;
 import inochi2d.core;
-import inmath.linalg;
+import numath;
 import numem;
 
 /**

@@ -8,11 +8,11 @@
 */
 module inochi2d.core.render.drawlist;
 import inochi2d.core.render.state;
-import inmath;
-import nulib;
-import numem;
 import inochi2d.core.render.texture;
 import inochi2d.core.mesh;
+import numath;
+import nulib;
+import numem;
 
 /**
     A draw list containing the rendering state and commands
