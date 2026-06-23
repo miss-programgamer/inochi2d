@@ -11,6 +11,7 @@ import inochi2d.core.render.resource;
 import nulib.io.stream;
 import numath;
 import numem;
+import gamut;
 
 /**
     Format of texture data.
@@ -30,12 +31,7 @@ enum TextureFormat : uint {
     /**
         Red-channel only mask data.
     */
-    r8 = 2,
-
-    /**
-        Depth-stencil texture.
-    */
-    depthStencil = 3,
+    r8 = 2
 }
 
 /**
@@ -147,9 +143,6 @@ public:
     */
     @property uint channels() {
         final switch (format) {
-        case TextureFormat.depthStencil:
-            return 4;
-
         case TextureFormat.rgba8Unorm:
             return 4;
 
@@ -162,8 +155,8 @@ public:
     }
 
     static TextureData load(ubyte[] data) {
-        import nulib.io.stream.memstream : MemoryStream;
 
+        import nulib.io.stream.memstream : MemoryStream;
         return TextureData.load(nogc_new!MemoryStream(data));
     }
 
@@ -174,8 +167,6 @@ public:
             stream = The stream to read from.
     */
     static TextureData load(Stream stream) {
-        import imagefmt : IFImage, IFInfo, IF_ERROR, read_image, read_info, ERROR;
-
         ubyte[] tmpbuffer = nu_malloca!ubyte(stream.length);
 
         TextureData result;
@@ -183,17 +174,28 @@ public:
             enforce(stream.read(tmpbuffer) >= 0, "Failed reading texture data from stream!");
             nogc_delete(stream);
 
-            IFInfo info = read_info(tmpbuffer);
-            enforce(info.e == 0, IF_ERROR[info.e]);
+            Image img;
+            img.loadFromMemory(tmpbuffer, LOAD_NORMAL);
+            switch(img.type) with(PixelType) {
+                case unknown:   throw nogc_new!NuException("Unknown pixel format for texture!");
 
-            result.width = info.w;
-            result.height = info.h;
+                case l8:
+                    result.format = TextureFormat.r8;
+                    break;
 
-            // Only read RGBA8 or R8 data.
-            IFImage img = read_image(tmpbuffer, info.c == 1 ? 1 : 4, 8);
-            result.data = cast(void[])img.buf8;
-            result.format = info.c == 1 ? TextureFormat.r8 : TextureFormat.rgba8Unorm;
+                case rgba8:
+                    result.format = TextureFormat.rgba8Unorm;
+                    break;
 
+                default:
+                    img.convertTo(PixelType.rgba8, LAYOUT_GAPLESS);
+                    result.format = TextureFormat.rgba8Unorm;
+                    break;
+            }
+
+            result.width = img.width();
+            result.height = img.height();
+            result.data = nu_dup(img.allPixelsAtOnce());
             return result;
         } catch (Exception ex) {
             nu_freea(tmpbuffer);
@@ -222,7 +224,6 @@ public:
             return;
 
         case TextureFormat.none:
-        case TextureFormat.depthStencil:
         case TextureFormat.r8:
             return;
         }
@@ -255,7 +256,6 @@ public:
             return;
 
         case TextureFormat.none:
-        case TextureFormat.depthStencil:
         case TextureFormat.r8:
             return;
         }
@@ -268,10 +268,10 @@ public:
             file = The file to dump the texture data to.
     */
     void dump(string file) {
-        import imagefmt : write_image;
-
         if (data.length > 0) {
-            write_image(file, width, height, cast(ubyte[])data, 4);
+            Image img;
+            img.createView(data.ptr, width, height, format.toPixelType, width*channels);
+            img.saveToFile(file);
         }
     }
 
@@ -461,5 +461,22 @@ public:
                 return i;
         }
         return -1;
+    }
+}
+
+/**
+    Converts a Inochi2D TextureFormat to a Gamut PixelType.
+
+    Params:
+        format = The texture format
+
+    Returns:
+        The equivalent pixel type.    
+*/
+PixelType toPixelType(TextureFormat format) @nogc nothrow pure {
+    final switch(format) {
+        case TextureFormat.none:        return PixelType.unknown;
+        case TextureFormat.r8:          return PixelType.l8;
+        case TextureFormat.rgba8Unorm:  return PixelType.rgba8;
     }
 }

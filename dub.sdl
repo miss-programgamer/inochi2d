@@ -15,7 +15,7 @@ subPackage "modules/godot"
 // Internally needed libraries.
 dependency ":inp" version="*"
 dependency "numath" version=">=0.5.0"
-dependency "imagefmt" version="~>2.1"
+dependency "intel-intrinsics" version=">=1.14.7"
 
 // Numem
 dependency "nulib" version=">=0.4.0"
@@ -24,6 +24,10 @@ dependency "numem" version=">=1.6.5"
 
 // NuRT
 dependency "nurt" version=">=0.2.2"
+
+// Image handling, only allow boost supported gamut codecs.
+dependency "gamut" version=">=3.4.1"
+subConfiguration "gamut" "boost"
 
 stringImportPaths "shaders/"
     
@@ -38,7 +42,6 @@ configuration "static" {
     targetType "library"
 
     // Platform-specific dependencies
-    dependency "intel-intrinsics" version="~>1.12"
 }
 
 // C FFI Dylib Configuration
@@ -47,9 +50,6 @@ configuration "dynamic" {
     versions "IN_DYNLIB"
 
     copyFiles "include/" "tech-docs"
-
-    // Platform-specific dependencies
-    dependency "intel-intrinsics" version="~>1.12"
 }
 
 // WASM configuration
