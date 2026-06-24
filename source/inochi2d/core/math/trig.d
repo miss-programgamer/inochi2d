@@ -7,7 +7,7 @@
     Authors: Luna Nielsen
 */
 module inochi2d.core.math.trig;
-import inmath.linalg;
+import numath;
 
 /**
     A 2D triangle

@@ -2,8 +2,7 @@ module inochi2d.animation.animation;
 import inochi2d.puppet;
 import inochi2d.param;
 import inochi2d.core;
-import inmath;
-import inmath.interpolate;
+import numath;
 import numem.sorting;
 import numem;
 

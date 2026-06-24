@@ -13,14 +13,9 @@
 */
 module inochi2d.core.math;
 import inochi2d.core;
-public import inmath.linalg;
-public import inmath.util;
-public import inmath.dampen;
-public import inmath.math;
-public import inmath.interpolate;
-public import std.math : isFinite;
-import std.algorithm;
-import std.json;
+public import numath.dampen;
+public import numath;
+import nulib.math;
 import numem;
 
 public import inochi2d.core.math.deform;
@@ -187,7 +182,7 @@ public:
     void update() {
         trs =
             mat4.translation(this.translation) *
-            quat.eulerRotation(this.rotation.x, this.rotation.y, this.rotation.z).toMatrix!(4, 4) *
+            mat4.zRotation(this.rotation.z) * mat4.yRotation(this.rotation.y) * mat4.xRotation(this.rotation.x) *
             mat4.scaling(
                     this.scale.x, this.scale.y, 1);
     }
@@ -292,11 +287,11 @@ int[] findSurroundingTriangle(vec2 pt, ref MeshData bindingMesh) {
 vec2 calcOffsetInTriangleCoords(vec2 pt, ref MeshData bindingMesh, ref int[] triangle) {
     if ((pt - bindingMesh.vertices[triangle[0]]).lengthSquared >
             (pt - bindingMesh.vertices[triangle[1]]).lengthSquared) {
-        swap(triangle[0], triangle[1]);
+        nu_swap(triangle[0], triangle[1]);
     }
     if ((pt - bindingMesh.vertices[triangle[0]]).lengthSquared >
             (pt - bindingMesh.vertices[triangle[2]]).lengthSquared) {
-        swap(triangle[0], triangle[2]);
+        nu_swap(triangle[0], triangle[2]);
     }
     auto p1 = bindingMesh.vertices[triangle[0]];
     auto p2 = bindingMesh.vertices[triangle[1]];
@@ -332,9 +327,9 @@ vec2 calcOffsetInTriangleCoords(vec2 pt, ref MeshData bindingMesh, ref int[] tri
 }
 
 // Unsigned short vectors
-alias vec2us = Vector!(ushort, 2); /// ditto
-alias vec3us = Vector!(ushort, 3); /// ditto
-alias vec4us = Vector!(ushort, 4); /// ditto
+alias vec2us = VectorImpl!(ushort, 2); /// ditto
+alias vec3us = VectorImpl!(ushort, 3); /// ditto
+alias vec4us = VectorImpl!(ushort, 4); /// ditto
 
 /**
     Serializes a provided vector type.
@@ -348,11 +343,11 @@ alias vec4us = Vector!(ushort, 4); /// ditto
 */
 void onSerialize(T)(ref T value, ref DataNode dst) @nogc if (isVector!T) {
     dst = DataNode.createArray();
-    static foreach (i; 0 .. T.dimension) {
+    static foreach (i; 0 .. T.dimensions) {
         static if (__traits(isFloating, T)) {
-            dst.array ~= DataNode(isFinite(value.vector[i]) ? value.vector[i] : 0);
+            dst.array ~= DataNode(isFinite(value.data[i]) ? value.data[i] : 0);
         } else {
-            dst.array ~= DataNode(value.vector[i]);
+            dst.array ~= DataNode(value.data[i]);
         }
     }
 }

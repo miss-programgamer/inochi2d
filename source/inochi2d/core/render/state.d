@@ -7,7 +7,7 @@
     Authors: Luna Nielsen
 */
 module inochi2d.core.render.state;
-import inmath;
+import numath;
 
 /*
     INFORMATION ABOUT BLENDING MODES

@@ -13,10 +13,10 @@ import inochi2d.cffi.eh;
 import inochi2d.puppet;
 import inochi2d.param;
 import inochi2d.core;
-import numem;
-import nulib.string;
 import inochi2d.cffi;
-import inmath;
+import nulib.string;
+import numath;
+import numem;
 
 version (IN_DYNLIB) :
 extern (C) export @nogc:
@@ -30,23 +30,26 @@ extern (C) export @nogc:
 */
 struct in_puppet_t;
 
-/**
-    Loads a puppet into memory.
+version (WebAssembly) {
+} else {
+    /**
+        Loads a puppet into memory.
 
-    Params:
-        file = The file to load.
-    
-    Returns:
-        A new puppet instance, or $(D null) on failure.
-    
-    See_Also:
-        $(D in_get_last_error)
-*/
-in_puppet_t* in_puppet_load(const(char)* file) {
-    import nulib.string : fromStringz;
+        Params:
+            file = The file to load.
+        
+        Returns:
+            A new puppet instance, or $(D null) on failure.
+        
+        See_Also:
+            $(D in_get_last_error)
+    */
+    in_puppet_t* in_puppet_load(const(char)* file) {
+        import nulib.string : fromStringz;
 
-    __in_clear_error();
-    return cast(in_puppet_t*)Puppet.fromFile(cast(string)file.fromStringz);
+        __in_clear_error();
+        return cast(in_puppet_t*)Puppet.fromFile(cast(string)file.fromStringz);
+    }
 }
 
 /**

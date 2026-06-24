@@ -1,10 +1,8 @@
 module inochi2d.core.serde.serializers;
 import inochi2d.core.math;
 import inochi2d.core;
-import inmath.util;
-import std.json;
-import std.traits;
 import inp.format;
+import numath;
 
 /**
     Whether type T can be serialized.

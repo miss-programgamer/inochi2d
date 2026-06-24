@@ -8,10 +8,9 @@
 */
 module inochi2d.core.phys.system;
 import inochi2d;
-import inmath;
+import numath;
 import numem;
 import nulib;
-import nulib.math : isFinite;
 
 abstract
 class PhysicsSystem : NuObject {
@@ -58,8 +57,8 @@ protected:
         Add a vec2 variable to the simulation
     */
     size_t addVariable(vec2* var) {
-        size_t index = addVariable(&(var.vector[0]));
-        addVariable(&(var.vector[1]));
+        size_t index = addVariable(&var.data[0]);
+        addVariable(&var.data[1]);
         return index;
     }
 
@@ -81,8 +80,8 @@ protected:
         Set the derivative of a vec2 variable (solver input)
     */
     void setD(ref vec2 var, vec2 value) {
-        setD(var.vector[0], value.x);
-        setD(var.vector[1], value.y);
+        setD(var.data[0], value.x);
+        setD(var.data[1], value.y);
     }
 
     float[] getState() {
@@ -105,7 +104,7 @@ protected:
 public:
 
      ~this() {
-        variableMap.clearContents();
+        variableMap.clear();
         refs.clear();
 
         // Free derivatives.

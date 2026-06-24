@@ -26,9 +26,6 @@ public import inochi2d.core.registry;
 public import inochi2d.core.property;
 public import inochi2d.core.render;
 
-import core.attribute : standalone;
-import std.exception;
-
 /**
     The public node registry.
 */
@@ -250,6 +247,11 @@ public:
         The transform in local-space.
     */
     @property ref Transform localTransform() @nogc => localTransform_.base;
+
+    /**
+        The offset transform in local-space.
+    */
+    @property ref Transform localTransformOffset() @nogc => localTransform_.offset;
 
     /**
         The transform in world space without locking

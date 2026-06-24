@@ -2,12 +2,13 @@ module inochi2d.animation.player;
 import inochi2d.puppet;
 import inochi2d.animation;
 import inochi2d.param;
-import inmath;
+import nulib.collections;
+import numath;
 
 class AnimationPlayer {
 private:
     Puppet puppet;
-    AnimationPlaybackRef[] playingAnimations;
+    vector!AnimationPlaybackRef playingAnimations;
 
 public:
     /**
@@ -90,7 +91,7 @@ public:
         foreach (anim; playingAnimations) {
             anim.valid = false;
         }
-        playingAnimations.length = 0;
+        playingAnimations.clear();
     }
 }
 
@@ -310,12 +311,9 @@ public:
         Destroys this animation instance
     */
     void destroy() {
-        import std.algorithm.mutation : remove;
-        import std.algorithm.searching : countUntil;
-
         this.valid = false;
         if (playbackId > -1)
-            player.playingAnimations = player.playingAnimations.remove(playbackId);
+            player.playingAnimations.removeAt(playbackId);
     }
 
     /**

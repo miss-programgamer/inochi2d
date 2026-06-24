@@ -11,11 +11,9 @@ import inochi2d.nodes.visual;
 import inochi2d.nodes;
 import inochi2d.core.math;
 import inochi2d.core;
-
-import std.exception;
+import numem;
 
 public import inochi2d.core.render.state;
-import numem;
 
 struct CompositeVars {
 align(vec4.sizeof):

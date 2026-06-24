@@ -19,4 +19,3 @@ public import inochi2d.core.memory;
 public import inochi2d.core.vector2d;
 
 import inochi2d.core.math;
-import std.stdio;

@@ -28,6 +28,8 @@ void writeJson(Stream stream, ref DataNode node) {
 }
 
 
+
+
 //
 //              IMPLEMENTATION DETAILS
 //
@@ -48,7 +50,7 @@ void writeJsonString(StreamWriter writer, string text) {
 }
 
 void writeJsonImpl()(StreamWriter writer, auto ref DataNode node) {
-    import nulib.conv : to_string;
+    import nulib.conv : to;
     final switch(node.type) {
         case DataNodeType.undefined:
             return;
@@ -61,17 +63,17 @@ void writeJsonImpl()(StreamWriter writer, auto ref DataNode node) {
             return;
         
         case DataNodeType.int_:
-            auto v = to_string(node.tryCoerce!int);
+            auto v = to!string(node.tryCoerce!int);
             writer.writeUTF8(v[]);
             return;
 
         case DataNodeType.uint_:
-            auto v = to_string(node.tryCoerce!uint);
+            auto v = to!string(node.tryCoerce!uint);
             writer.writeUTF8(v[]);
             return;
 
         case DataNodeType.float_:
-            auto v = to_string(node.tryCoerce!float);
+            auto v = to!string(node.tryCoerce!float);
             writer.writeUTF8(v[]);
             return;
         

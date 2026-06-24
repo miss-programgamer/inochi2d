@@ -121,10 +121,10 @@ protected:
                     );
 
                     // Do some cheaper checks first.
-                    float minX = min(tri.p1.x, tri.p2.x, tri.p3.x);
-                    float maxX = max(tri.p1.x, tri.p2.x, tri.p3.x);
-                    float minY = min(tri.p1.y, tri.p2.y, tri.p3.y);
-                    float maxY = max(tri.p1.y, tri.p2.y, tri.p3.y);
+                    float minX = min(min(tri.p1.x, tri.p2.x), tri.p3.x);
+                    float maxX = max(max(tri.p1.x, tri.p2.x), tri.p3.x);
+                    float minY = min(min(tri.p1.y, tri.p2.y), tri.p3.y);
+                    float maxY = max(max(tri.p1.y, tri.p2.y), tri.p3.y);
                     if (!(minX < mp.x && maxX > mp.x) &&
                             !(minY < mp.y && maxY > mp.y))
                         continue;

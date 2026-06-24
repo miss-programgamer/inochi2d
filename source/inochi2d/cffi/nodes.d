@@ -12,7 +12,7 @@ import inochi2d.nodes;
 import inochi2d.core;
 import inochi2d.cffi;
 import nulib.string;
-import inmath;
+import numath;
 import numem;
 
 version (IN_DYNLIB) :

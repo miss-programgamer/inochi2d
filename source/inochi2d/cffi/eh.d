@@ -56,24 +56,3 @@ private {
         __in_last_error = __in_last_error.nu_terminate;
     }
 }
-
-//
-//              DRT INIT
-//
-
-/// CRT CTOR
-pragma(crt_constructor)
-extern (C) private void in_crt_init() {
-    import core.runtime : rt_init;
-
-    assumeNoGC(&rt_init);
-    __in_clear_error();
-}
-
-/// CRT DTOR
-pragma(crt_destructor)
-extern (C) private void in_crt_term() {
-    import core.runtime : rt_term;
-
-    assumeNoGC(&rt_term);
-}

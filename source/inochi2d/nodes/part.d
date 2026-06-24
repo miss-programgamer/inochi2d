@@ -1,4 +1,4 @@
-/*
+/**
     Inochi2D Part
 
     Copyright © 2020, Inochi2D Project
@@ -11,12 +11,9 @@ import inochi2d.nodes.visual;
 import inochi2d.effect;
 import inochi2d.nodes;
 import inochi2d.core;
+import numath;
 import nulib;
 import numem;
-
-import std.exception;
-import std.algorithm.mutation : copy;
-import std.math : isNaN;
 
 public import inochi2d.core.render.state;
 public import inochi2d.core.mesh;

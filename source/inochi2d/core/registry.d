@@ -206,15 +206,13 @@ public:
     }
 
     /**
-        Returns an iterator over all TypeIDs registered
-        with the TypeRegistry.
+        Allows iterating over the registry.
 
-        Returns:
-            A forward range of all TypeId instances stored
-            within this registry.
+        Params:
+            dg = The function to call on each iteration.
     */
-    auto iterAll() {
-        return typeIdStore.byValue();
+    int opApply(scope int delegate(TypeId) dg) @nogc @trusted {
+        return typeIdStore.opApply(dg);
     }
 
     /**

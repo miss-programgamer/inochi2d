@@ -9,7 +9,7 @@
 module inochi2d.core.serde;
 import inochi2d.core.math;
 import inochi2d.core;
-import inmath.util;
+import numath;
 import numem.core.traits;
 
 public import inochi2d.core.serde.deserializers;
