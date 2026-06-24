@@ -8,6 +8,8 @@ toolchainRequirements dmd="no" gdc="no" ldc=">=1.40.0"
 
 targetPath "out/"
 
+excludedSourceFiles "**/old/**"
+
 // Submodules
 subPackage "modules/inp"
 subPackage "modules/godot"
@@ -19,11 +21,11 @@ dependency "imagefmt" version="~>2.1"
 dependency "intel-intrinsics" version="~>1.12"
 
 // Numem
-dependency "nulib" version=">=0.3.12"
+dependency "nulib" path="C:\\Users\\Mireille\\Repos\\nulib"
 dependency "numem" version=">=1.6.5"
 
 stringImportPaths "shaders/"
-    
+
 copyFiles "LICENSE"
 
 // SIMD optimization flags.

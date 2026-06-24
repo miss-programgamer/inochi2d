@@ -496,7 +496,7 @@ public:
             $(D false) otherwise.
     */
     override
-    bool hasProperty(string key) {
+    bool hasProperty(string key) const {
         switch (key) {
         case "opacity":
         case "tint.r":
@@ -523,7 +523,7 @@ public:
             The floating point value of the property.
     */
     override
-    float getProperty(string key) {
+    float getProperty(string key) const {
         switch (key) {
         case "opacity":
             return offsetOpacity;
@@ -556,7 +556,7 @@ public:
             The default value of the property.
     */
     override
-    float getPropertyDefault(string key) {
+    float getPropertyDefault(string key) const {
         switch (key) {
         case "alphaThreshold":
             return 0;
